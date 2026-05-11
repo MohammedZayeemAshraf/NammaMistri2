@@ -48,7 +48,7 @@ class LaborViewModel(private val repository: NammaMistriRepository) : ViewModel(
                     repository.getTotalDaysWorkedFlow(worker.id),
                     repository.getTotalAdvanceFlow(worker.id)
                 ) { entries, days, paid ->
-                    val todayEntry = entries.find { isSameDay(it.date, date) }
+                    val todayEntry = entries.find { isSameDay(it.date, date) && it.paymentMode == null }
                     val earnings = days * worker.dailyWage
                     WorkerState(
                         worker = worker,
@@ -109,7 +109,7 @@ class LaborViewModel(private val repository: NammaMistriRepository) : ViewModel(
         viewModelScope.launch {
             val date = _selectedDate.value
             val entries = repository.getEntriesByWorker(workerId).first()
-            val existing = entries.find { isSameDay(it.date, date) }
+            val existing = entries.find { isSameDay(it.date, date) && it.paymentMode == null }
             
             if (existing != null) {
                 repository.insertLaborEntry(existing.copy(attendance = attendance))
