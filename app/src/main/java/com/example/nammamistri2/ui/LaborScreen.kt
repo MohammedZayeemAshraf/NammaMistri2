@@ -791,7 +791,7 @@ fun WorkerDetailCard(workerState: WorkerState) {
             }
         }
     }
-}
+ }
 
 @Composable
 fun AddWorkerDialog(onDismiss: () -> Unit, onAdd: (String, Double, String) -> Unit) {
