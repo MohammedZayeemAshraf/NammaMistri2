@@ -1,6 +1,7 @@
 package com.example.nammamistri2.data.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -20,4 +21,7 @@ interface MaterialRateDao {
 
     @Query("SELECT * FROM material_rates WHERE id = :id")
     suspend fun getRateById(id: Long): MaterialRate?
+
+    @Delete
+    suspend fun delete(rate: MaterialRate)
 }

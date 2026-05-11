@@ -24,4 +24,10 @@ class RatesViewModel(private val repository: NammaMistriRepository) : ViewModel(
             repository.updateMaterialRate(rate)
         }
     }
+
+    fun deleteMaterialRate(rate: MaterialRate) {
+        viewModelScope.launch {
+            repository.deleteMaterialRate(rate)
+        }
+    }
 }

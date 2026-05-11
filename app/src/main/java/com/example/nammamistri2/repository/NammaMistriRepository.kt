@@ -34,6 +34,7 @@ class NammaMistriRepository(
     // Material Rates
     suspend fun insertMaterialRate(rate: MaterialRate) = materialRateDao.insert(rate)
     suspend fun updateMaterialRate(rate: MaterialRate) = materialRateDao.update(rate)
+    suspend fun deleteMaterialRate(rate: MaterialRate) = materialRateDao.delete(rate)
     fun getAllMaterialRates() = materialRateDao.getAllRates()
     suspend fun getMaterialRateById(id: Long) = materialRateDao.getRateById(id)
 
