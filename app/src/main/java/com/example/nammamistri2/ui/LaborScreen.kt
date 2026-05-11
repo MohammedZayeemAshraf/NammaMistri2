@@ -346,7 +346,6 @@ fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMod
                     }
                 }
             }
-            }
 
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = BackgroundCream, thickness = 1.dp)
