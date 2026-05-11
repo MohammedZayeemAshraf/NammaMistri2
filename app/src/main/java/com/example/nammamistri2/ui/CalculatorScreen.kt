@@ -1,9 +1,21 @@
 package com.example.nammamistri2.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -13,21 +25,30 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.nammamistri2.data.MaterialRate
-import com.example.nammamistri2.viewmodel.CalculatorViewModel
-import com.example.nammamistri2.viewmodel.LengthUnit
-import com.example.nammamistri2.viewmodel.MaterialResult
-import com.example.nammamistri2.viewmodel.StructureResult
+import com.example.nammamistri2.viewmodel.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+// ─────────────────────────────────────────────────────────────────
+// COLOUR HELPERS
+// ─────────────────────────────────────────────────────────────────
+private val OrangePrimary = Color(0xFFE65100)
+private val OrangeLight   = Color(0xFFFFF3E0)
+private val BluePrimary   = Color(0xFF1565C0)
+private val GreenDark     = Color(0xFF2E7D32)
+private val PurpleDark    = Color(0xFF6A1B9A)
 
 // ─────────────────────────────────────────────────────────────────
 // MAIN SCREEN
@@ -36,262 +57,418 @@ import com.example.nammamistri2.viewmodel.StructureResult
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalculatorScreen(viewModel: CalculatorViewModel) {
-    val rates by viewModel.materialRates.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var selectedUnit by remember { mutableStateOf(LengthUnit.FEET) }
+    val rates   by viewModel.materialRates.collectAsState()
+    var selTab  by remember { mutableIntStateOf(0) }
+    var selUnit by remember { mutableStateOf(LengthUnit.FEET) }
     val tabs = listOf("Wall", "Room", "Slab", "Column")
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Unit selector
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Card(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(14.dp)
+            colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape    = RoundedCornerShape(14.dp)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text("Select Unit", fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text("Measurement Unit", fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(6.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LengthUnit.entries.forEach { unit ->
-                        FilterChip(
-                            selected = selectedUnit == unit,
-                            onClick = { selectedUnit = unit },
-                            label = {
-                                Text(unit.shortLabel, fontSize = 12.sp,
-                                    fontWeight = if (selectedUnit == unit) FontWeight.Bold else FontWeight.Normal)
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf(LengthUnit.FEET, LengthUnit.METERS, LengthUnit.INCHES).forEach { u ->
+                        FilterChip(selected = selUnit == u, onClick = { selUnit = u },
+                            label = { Text(u.shortLabel, fontSize = 12.sp,
+                                fontWeight = if (selUnit == u) FontWeight.Bold else FontWeight.Normal) },
+                            modifier = Modifier.weight(1f))
                     }
                 }
             }
         }
-
-        // Tab row
-        TabRow(selectedTabIndex = selectedTab,
+        TabRow(selectedTabIndex = selTab,
             containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary) {
-            tabs.forEachIndexed { index, title ->
-                Tab(selected = selectedTab == index, onClick = { selectedTab = index },
-                    text = { Text(title, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp) })
+            contentColor   = MaterialTheme.colorScheme.primary) {
+            tabs.forEachIndexed { i, t ->
+                Tab(selected = selTab == i, onClick = { selTab = i },
+                    text = { Text(t, fontWeight = if (selTab == i) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp) })
             }
         }
-
-        when (selectedTab) {
-            0 -> WallTab(viewModel, rates, selectedUnit)
-            1 -> RoomTab(viewModel, rates, selectedUnit)
-            2 -> SlabTab(viewModel, rates, selectedUnit)
-            3 -> ColumnTab(viewModel, rates, selectedUnit)
+        when (selTab) {
+            0 -> WallTab(viewModel, rates, selUnit)
+            1 -> RoomTab(viewModel, rates, selUnit)
+            2 -> SlabTab(viewModel, rates, selUnit)
+            3 -> ColumnTab(viewModel, rates, selUnit)
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// ILLUSTRATIONS (Canvas-based)
+// BRICK PICKER DIALOG
 // ─────────────────────────────────────────────────────────────────
 
 @Composable
-fun WallIllustration() {
-    val brickColor = Color(0xFFBF5700)
-    val mortarColor = Color(0xFFF5EED8)
-    Canvas(modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFFF3E0))) {
-        val bW = size.width / 7f; val bH = size.height / 6f; val gap = 4f
-        for (row in 0..6) {
-            val offset = if (row % 2 == 0) 0f else bW / 2f
-            var x = -offset
-            while (x < size.width + bW) {
-                drawRoundRect(brickColor, topLeft = Offset(x + gap / 2, row * bH + gap / 2), size = Size(bW - gap, bH - gap), cornerRadius = CornerRadius(4f))
-                x += bW
+fun BrickPickerDialog(initial: BrickType, onDismiss: () -> Unit, onSelect: (BrickType) -> Unit) {
+    var selected by remember { mutableStateOf(initial) }
+    var query    by remember { mutableStateOf("") }
+
+    val filtered = BrickType.entries.filter {
+        query.isBlank() || it.label.contains(query, true) ||
+        it.description.contains(query, true) || it.sizeLabel.contains(query, true)
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(24.dp), tonalElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("Select Brick / Block Type",
+                    style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(14.dp))
+
+                OutlinedTextField(
+                    value = query, onValueChange = { query = it },
+                    label = { Text("Search bricks\u2026") },
+                    leadingIcon  = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = { if (query.isNotEmpty()) IconButton({ query = "" }) { Icon(Icons.Default.Clear, null, Modifier.size(18.dp)) } },
+                    singleLine = true, shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(12.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.heightIn(max = 380.dp)) {
+                    filtered.forEach { bt ->
+                        val isSel = selected == bt
+                        val bg by animateColorAsState(if (isSel) OrangeLight else MaterialTheme.colorScheme.surface, tween(200), label = "bb")
+                        Surface(shape = RoundedCornerShape(16.dp), color = bg,
+                            modifier = Modifier.fillMaxWidth()
+                                .border(if (isSel) 2.dp else 1.dp,
+                                    if (isSel) OrangePrimary else MaterialTheme.colorScheme.outlineVariant,
+                                    RoundedCornerShape(16.dp))
+                                .clickable { selected = bt }) {
+                            Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(contentAlignment = Alignment.Center,
+                                    modifier = Modifier.size(52.dp).clip(CircleShape)
+                                        .background(if (isSel) OrangePrimary.copy(.12f) else MaterialTheme.colorScheme.surfaceVariant)) {
+                                    Text(bt.emoji, fontSize = 26.sp, textAlign = TextAlign.Center)
+                                }
+                                Spacer(Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(bt.label, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                                        color = if (isSel) OrangePrimary else MaterialTheme.colorScheme.onSurface)
+                                    Text(bt.sizeLabel, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold)
+                                    Text(bt.description, fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(.6f), lineHeight = 14.sp)
+                                }
+                                if (isSel) Icon(Icons.Default.CheckCircle, null, tint = OrangePrimary, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) { Text("Cancel") }
+                    Button(onClick = { onSelect(selected); onDismiss() }, modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = OrangePrimary)) {
+                        Icon(Icons.Default.Check, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Select Brick")
+                    }
+                }
             }
         }
-        val dW = bW * 1.5f; val dH = bH * 3f; val dX = size.width / 2f - dW / 2f
-        drawRect(mortarColor, topLeft = Offset(dX, size.height - dH), size = Size(dW, dH))
-        val wW = bW * 1.2f; val wH = bH * 1.5f
-        drawRect(mortarColor, topLeft = Offset(size.width * 0.18f, size.height * 0.25f), size = Size(wW, wH))
-        drawRect(Color(0xFF90CAF9).copy(alpha = 0.6f), topLeft = Offset(size.width * 0.18f, size.height * 0.25f), size = Size(wW, wH))
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ILLUSTRATIONS
+// ─────────────────────────────────────────────────────────────────
+
+private fun android.graphics.Canvas.drawDim(
+    x1: Float, y1: Float, x2: Float, y2: Float,
+    label: String, p: android.graphics.Paint, ap: android.graphics.Paint
+) {
+    drawLine(x1, y1, x2, y2, ap)
+    val dx = x2 - x1; val dy = y2 - y1
+    val len = kotlin.math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+    if (len == 0f) return
+    val ux = dx / len; val uy = dy / len; val a = 10f
+    drawLine(x1, y1, x1 + ux * a - uy * a * .4f, y1 + uy * a + ux * a * .4f, ap)
+    drawLine(x1, y1, x1 + ux * a + uy * a * .4f, y1 + uy * a - ux * a * .4f, ap)
+    drawLine(x2, y2, x2 - ux * a - uy * a * .4f, y2 - uy * a + ux * a * .4f, ap)
+    drawLine(x2, y2, x2 - ux * a + uy * a * .4f, y2 - uy * a - ux * a * .4f, ap)
+    drawText(label, (x1 + x2) / 2f, (y1 + y2) / 2f - 6f, p)
+}
+
+@Composable
+fun WallIllustration() {
+    Canvas(modifier = Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFFF8F0))) {
+        drawIntoCanvas { canvas ->
+            val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
+            val wL = 44f + 20f; val wT = 44f; val wR = w - 44f - 20f; val wB = h - 44f
+            nc.drawRect(wL, wT, wR, wB, android.graphics.Paint().apply { color = Color(0xFFE8D5B7).toArgb() })
+            val bp = android.graphics.Paint().apply { color = Color(0xFFBCAAA4).toArgb(); strokeWidth = 1f }
+            val bH = 26f; val bW = 58f
+            var by = wT + bH; while (by < wB) { nc.drawLine(wL, by, wR, by, bp); by += bH }
+            var row = 0; var cy = wT
+            while (cy < wB) {
+                val off = if (row % 2 == 0) 0f else bW / 2f; var bx = wL + off
+                while (bx < wR) { nc.drawLine(bx, cy, bx, minOf(cy + bH, wB), bp); bx += bW }
+                cy += bH; row++
+            }
+            nc.drawRect(wL, wT, wR, wB, android.graphics.Paint().apply { color = Color(0xFF8D6E63).toArgb(); strokeWidth = 2.5f; style = android.graphics.Paint.Style.STROKE })
+            val dp = android.graphics.Paint().apply { color = BluePrimary.toArgb(); strokeWidth = 1.8f }
+            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 28f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            nc.drawDim(wL, wB + 16f, wR, wB + 16f, "Length (L)", lp, dp)
+            val wHt = wB - wT
+            nc.save(); nc.rotate(-90f, wL - 16f, (wT + wB) / 2f)
+            nc.drawDim(wL - 16f - wHt / 2, (wT + wB) / 2f, wL - 16f + wHt / 2, (wT + wB) / 2f, "Height (H)", lp, dp)
+            nc.restore()
+        }
     }
 }
 
 @Composable
 fun RoomIllustration() {
-    Canvas(modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF0D47A1))) {
-        val m = 30f; val wT = 14f
-        val gridColor = Color.White.copy(alpha = 0.08f)
-        var gx = 0f; while (gx < size.width) { drawLine(gridColor, Offset(gx, 0f), Offset(gx, size.height)); gx += 20f }
-        var gy = 0f; while (gy < size.height) { drawLine(gridColor, Offset(0f, gy), Offset(size.width, gy)); gy += 20f }
-        val wc = Color.White
-        drawLine(wc, Offset(m, size.height - m), Offset(size.width - m, size.height - m), wT)
-        drawLine(wc, Offset(m, m), Offset(size.width - m, m), wT)
-        drawLine(wc, Offset(m, m), Offset(m, size.height - m), wT)
-        val dGap = 50f; val dMid = size.height * 0.7f
-        drawLine(wc, Offset(size.width - m, m), Offset(size.width - m, dMid - dGap / 2), wT)
-        drawLine(wc, Offset(size.width - m, dMid + dGap / 2), Offset(size.width - m, size.height - m), wT)
-        drawArc(Color.White.copy(alpha = 0.5f), 180f, 90f, false, Offset(size.width - m - dGap, dMid - dGap / 2), Size(dGap, dGap), style = Stroke(2f))
-        listOf(0.3f, 0.6f).forEach { xf -> drawLine(Color(0xFF42A5F5), Offset(size.width * xf - 20f, m), Offset(size.width * xf + 20f, m), wT + 4f) }
-        drawRect(Color.White.copy(alpha = 0.05f), topLeft = Offset(m + wT, m + wT), size = Size(size.width - 2 * (m + wT), size.height - 2 * (m + wT)))
-        drawLine(Color(0xFFFFEB3B), Offset(m + wT, size.height - 8f), Offset(size.width - m - wT, size.height - 8f), 2f)
-        drawLine(Color(0xFFFFEB3B), Offset(8f, m + wT), Offset(8f, size.height - m - wT), 2f)
+    Canvas(modifier = Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF0F4FF))) {
+        drawIntoCanvas { canvas ->
+            val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
+            val m = 46f; val wt = 15f
+            val oL = m; val oT = m; val oR = w - m; val oB = h - m
+            val iL = oL + wt; val iT = oT + wt; val iR = oR - wt; val iB = oB - wt
+            nc.drawRect(iL, iT, iR, iB, android.graphics.Paint().apply { color = Color(0xFFFFF9C4).toArgb() })
+            val gp = android.graphics.Paint().apply { color = android.graphics.Color.argb(45, 180, 160, 0); strokeWidth = 1f }
+            var gx = iL + 26f; while (gx < iR) { nc.drawLine(gx, iT, gx, iB, gp); gx += 26f }
+            var gy = iT + 26f; while (gy < iB) { nc.drawLine(iL, gy, iR, gy, gp); gy += 26f }
+            val wallP = android.graphics.Paint().apply { color = Color(0xFFCFD8DC).toArgb() }
+            nc.drawRect(oL, oT, oR, iT, wallP); nc.drawRect(oL, iB, oR, oB, wallP)
+            nc.drawRect(oL, oT, iL, oB, wallP); nc.drawRect(iR, oT, oR, oB, wallP)
+            val sp = android.graphics.Paint().apply { color = Color(0xFF455A64).toArgb(); strokeWidth = 2f; style = android.graphics.Paint.Style.STROKE }
+            nc.drawRect(oL, oT, oR, oB, sp); nc.drawRect(iL, iT, iR, iB, sp)
+            val dp = android.graphics.Paint().apply { color = BluePrimary.toArgb(); strokeWidth = 1.8f }
+            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 26f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            nc.drawDim(oL, oB + 14f, oR, oB + 14f, "Length (L)", lp, dp)
+            val rH = oB - oT
+            nc.save(); nc.rotate(-90f, oR + 14f, (oT + oB) / 2f)
+            nc.drawDim(oR + 14f - rH / 2, (oT + oB) / 2f, oR + 14f + rH / 2, (oT + oB) / 2f, "Width (W)", lp, dp)
+            nc.restore()
+        }
     }
 }
 
 @Composable
 fun SlabIllustration() {
-    Canvas(modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF1F8E9))) {
-        val cx = size.width / 2f; val slabW = size.width * 0.75f
-        val slabH = size.height * 0.38f; val slabT = 36f; val offX = size.width * 0.12f
-        val topPath = Path().apply {
-            moveTo(cx - slabW / 2 + offX, slabH - slabT / 2); lineTo(cx + slabW / 2 + offX, slabH - slabT / 2)
-            lineTo(cx + slabW / 2, slabH + slabT / 2); lineTo(cx - slabW / 2, slabH + slabT / 2); close()
-        }
-        drawPath(topPath, Color(0xFFBDBDBD))
-        drawRect(Color(0xFF9E9E9E), topLeft = Offset(cx - slabW / 2, slabH + slabT / 2), size = Size(slabW, slabT))
-        drawRect(Color(0xFF757575), topLeft = Offset(cx - slabW / 2, slabH + slabT * 1.5f), size = Size(slabW, 6f))
-        val rY = slabH + slabT * 1.1f; val step = slabW / 6f
-        for (i in 0..5) drawLine(Color(0xFFBF5700), Offset(cx - slabW / 2 + step * i, rY - 8f), Offset(cx - slabW / 2 + step * i, rY + 8f), 3f)
-        drawLine(Color(0xFFBF5700), Offset(cx - slabW / 2 + 4f, rY), Offset(cx + slabW / 2 - 4f, rY), 3f)
-        listOf(cx - slabW / 2 + 8f, cx + slabW / 2 - 8f).forEach { px ->
-            drawRect(Color(0xFF78909C), topLeft = Offset(px - 8f, slabH + slabT * 1.5f), size = Size(16f, size.height - slabH - slabT * 1.5f - 8f))
+    Canvas(modifier = Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF5F5F5))) {
+        drawIntoCanvas { canvas ->
+            val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
+            val sL = 55f; val sR = w - 80f; val sT = 55f; val sB = sT + 38f
+            val offX = 36f; val offY = -28f
+            val topPath = android.graphics.Path().apply {
+                moveTo(sL + offX, sT + offY); lineTo(sR + offX, sT + offY)
+                lineTo(sR, sT); lineTo(sL, sT); close()
+            }
+            nc.drawPath(topPath, android.graphics.Paint().apply { color = Color(0xFFB0BEC5).toArgb() })
+            nc.drawPath(topPath, android.graphics.Paint().apply { color = android.graphics.Color.DKGRAY; style = android.graphics.Paint.Style.STROKE; strokeWidth = 1.5f })
+            nc.drawRect(sL, sT, sR, sB, android.graphics.Paint().apply { color = Color(0xFF78909C).toArgb() })
+            nc.drawRect(sL, sT, sR, sB, android.graphics.Paint().apply { color = android.graphics.Color.DKGRAY; style = android.graphics.Paint.Style.STROKE; strokeWidth = 1.5f })
+            val rP = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb(); strokeWidth = 2.5f }
+            val rY = sT + (sB - sT) * .65f
+            nc.drawLine(sL + 6f, rY, sR - 6f, rY, rP)
+            val step = (sR - sL) / 7f; for (i in 1..6) nc.drawLine(sL + step * i, sT + 4f, sL + step * i, sB - 4f, rP)
+            val dp = android.graphics.Paint().apply { color = BluePrimary.toArgb(); strokeWidth = 1.8f }
+            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 26f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            nc.drawDim(sL, sB + 16f, sR, sB + 16f, "Length (L)", lp, dp)
+            nc.save(); nc.rotate(-90f, sR + offX + 14f, (sT + sB) / 2f); nc.drawText("Width (W)", sR + offX - 6f, sT + offY - 6f, lp); nc.restore()
         }
     }
 }
 
 @Composable
 fun ColumnIllustration() {
-    Canvas(modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3E5F5))) {
-        val cx = size.width / 2f; val colW = 60f; val baseW = 100f
-        val baseH = 16f; val capH = 16f
-        val colH = size.height - baseH * 2 - capH * 2 - 16f
-        val colTop = (size.height - colH - baseH - capH) / 2f
-        val cc = Color(0xFF90A4AE); val rc = Color(0xFFBF5700)
-        drawRoundRect(cc, topLeft = Offset(cx - baseW / 2, colTop - capH), size = Size(baseW, capH), cornerRadius = CornerRadius(6f))
-        drawRoundRect(cc, topLeft = Offset(cx - colW / 2, colTop), size = Size(colW, colH), cornerRadius = CornerRadius(4f))
-        drawRoundRect(cc, topLeft = Offset(cx - baseW / 2, colTop + colH), size = Size(baseW, baseH), cornerRadius = CornerRadius(6f))
-        val sStep = colH / 6f
-        for (i in 1..5) {
-            val sy = colTop + sStep * i
-            drawRect(rc.copy(alpha = 0.9f), topLeft = Offset(cx - colW / 2 + 6f, sy - 6f), size = Size(colW - 12f, 12f), style = Stroke(2.5f))
+    Canvas(modifier = Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3E5F5))) {
+        drawIntoCanvas { canvas ->
+            val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
+            val cx = w / 2f; val colW = 66f; val colH = h - 55f
+            val cL = cx - colW / 2; val cT = 18f; val cR = cx + colW / 2; val cB = cT + colH
+            nc.drawRect(cL, cT, cR, cB, android.graphics.Paint().apply { color = Color(0xFFB0BEC5).toArgb() })
+            nc.drawRect(cL, cT, cR, cB, android.graphics.Paint().apply { color = Color(0xFF37474F).toArgb(); style = android.graphics.Paint.Style.STROKE; strokeWidth = 2f })
+            val sP = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb(); strokeWidth = 2.5f; style = android.graphics.Paint.Style.STROKE }
+            val sStep = colH / 7f; for (i in 1..6) { val sy = cT + sStep * i; nc.drawRect(cL + 8f, sy - 6f, cR - 8f, sy + 6f, sP) }
+            val rP = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb() }
+            listOf(cL + 13f to cT + 13f, cR - 13f to cT + 13f, cL + 13f to cB - 13f, cR - 13f to cB - 13f).forEach { nc.drawCircle(it.first, it.second, 7f, rP) }
+            val dp = android.graphics.Paint().apply { color = PurpleDark.toArgb(); strokeWidth = 1.8f }
+            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 26f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            nc.save(); nc.rotate(-90f, cL - 16f, (cT + cB) / 2f)
+            nc.drawDim(cL - 16f - colH / 2, (cT + cB) / 2f, cL - 16f + colH / 2, (cT + cB) / 2f, "Height (H)", lp, dp)
+            nc.restore()
+            nc.drawDim(cL, cB + 16f, cR, cB + 16f, "Width", lp, dp)
         }
-        listOf(Offset(cx - colW / 2 + 10f, colTop + 8f), Offset(cx + colW / 2 - 10f, colTop + 8f),
-            Offset(cx - colW / 2 + 10f, colTop + colH - 8f), Offset(cx + colW / 2 - 10f, colTop + colH - 8f)
-        ).forEach { drawCircle(rc, 5f, it) }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// SHARED INPUT HELPERS
+// SHARED HELPERS
 // ─────────────────────────────────────────────────────────────────
 
 @Composable
-fun CalcField(label: String, value: String, onValueChange: (String) -> Unit, unitLabel: String, modifier: Modifier = Modifier) {
-    OutlinedTextField(value = value, onValueChange = onValueChange, label = { Text("$label ($unitLabel)") },
+fun CalcField(label: String, value: String, onChange: (String) -> Unit, unitLabel: String, modifier: Modifier = Modifier) {
+    OutlinedTextField(value = value, onValueChange = onChange, label = { Text("$label ($unitLabel)") },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true,
         modifier = modifier, shape = RoundedCornerShape(12.dp))
 }
 
 @Composable
-fun CountField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
-    OutlinedTextField(value = value, onValueChange = onValueChange, label = { Text(label) },
+fun CountField(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    OutlinedTextField(value = value, onValueChange = onChange, label = { Text(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
         modifier = modifier, shape = RoundedCornerShape(12.dp))
 }
 
 @Composable
-fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+fun SectionCard(title: String, accent: Color = MaterialTheme.colorScheme.primary,
+                content: @Composable ColumnScope.() -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = accent)
             content()
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OpeningsCard(
-    doorW: String, onDoorW: (String) -> Unit, doorH: String, onDoorH: (String) -> Unit,
-    doorCount: String, onDoorCount: (String) -> Unit,
-    winW: String, onWinW: (String) -> Unit, winH: String, onWinH: (String) -> Unit,
-    winCount: String, onWinCount: (String) -> Unit, unit: LengthUnit
-) {
-    SectionCard("Deductions – Doors & Windows") {
-        Text("Doors", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CalcField("Width", doorW, onDoorW, unit.shortLabel, Modifier.weight(1f))
-            CalcField("Height", doorH, onDoorH, unit.shortLabel, Modifier.weight(1f))
-            CountField("Count", doorCount, onDoorCount, Modifier.weight(0.7f))
+fun ThicknessDropdown(label: String, value: String, onChange: (String) -> Unit, unit: LengthUnit, modifier: Modifier = Modifier) {
+    data class P(val t: String, val m: Double)
+    val presets = listOf(P("4.5\"(115mm)", .115), P("9\"(230mm)", .230), P("13.5\"(345mm)", .345),
+        P("5\"(125mm)", .125), P("6\"(150mm)", .150), P("8\"(200mm)", .200), P("10\"(250mm)", .250), P("12\"(300mm)", .300))
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
+        OutlinedTextField(value = value, onValueChange = onChange, label = { Text("$label (${unit.shortLabel})") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true,
+            modifier = Modifier.fillMaxWidth().menuAnchor(), shape = RoundedCornerShape(12.dp))
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            presets.forEach { p ->
+                val cv = String.format("%.3f", p.m / unit.factor)
+                DropdownMenuItem(text = { Text("${p.t}  \u2192  $cv ${unit.shortLabel}", fontSize = 12.sp) },
+                    onClick = { onChange(cv); expanded = false })
+            }
         }
-        Text("Windows", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CalcField("Width", winW, onWinW, unit.shortLabel, Modifier.weight(1f))
-            CalcField("Height", winH, onWinH, unit.shortLabel, Modifier.weight(1f))
-            CountField("Count", winCount, onWinCount, Modifier.weight(0.7f))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun <T : Enum<T>> GenericDropdown(label: String, entries: List<T>, selected: T,
+                                   onSelect: (T) -> Unit, labelOf: (T) -> String,
+                                   modifier: Modifier = Modifier) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
+        OutlinedTextField(value = labelOf(selected), onValueChange = {}, readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            singleLine = true, modifier = Modifier.fillMaxWidth().menuAnchor(), shape = RoundedCornerShape(12.dp))
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            entries.forEach { e ->
+                DropdownMenuItem(text = { Text(labelOf(e), fontSize = 13.sp) },
+                    onClick = { onSelect(e); expanded = false })
+            }
         }
     }
 }
 
 @Composable
-fun CalcButton(onClick: () -> Unit) {
+fun WastageSlider(wastage: Int, onChange: (Int) -> Unit) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text("Wastage Factor", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                Text("+$wastage%", modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 13.sp)
+            }
+        }
+        Slider(value = wastage.toFloat(), onValueChange = { onChange(it.toInt()) }, valueRange = 0f..20f, steps = 19, modifier = Modifier.fillMaxWidth())
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("0%", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("5% recommended", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
+            Text("20%", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+fun CalcButton(label: String = "Calculate", onClick: () -> Unit) {
     Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
-        Icon(Icons.Default.Calculate, contentDescription = null)
+        Icon(Icons.Default.Calculate, null)
         Spacer(Modifier.width(10.dp))
-        Text("Calculate", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun OpeningsCard(doorW: String, onDW: (String) -> Unit, doorH: String, onDH: (String) -> Unit,
+                 doorCount: String, onDC: (String) -> Unit,
+                 winW: String, onWW: (String) -> Unit, winH: String, onWH: (String) -> Unit,
+                 winCount: String, onWC: (String) -> Unit, unit: LengthUnit) {
+    SectionCard("Deductions \u2013 Doors & Windows") {
+        Text("Doors", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(.6f))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CalcField("Width", doorW, onDW, unit.shortLabel, Modifier.weight(1f))
+            CalcField("Height", doorH, onDH, unit.shortLabel, Modifier.weight(1f))
+            CountField("Count", doorCount, onDC, Modifier.weight(.7f))
+        }
+        Text("Windows", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(.6f))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CalcField("Width", winW, onWW, unit.shortLabel, Modifier.weight(1f))
+            CalcField("Height", winH, onWH, unit.shortLabel, Modifier.weight(1f))
+            CountField("Count", winCount, onWC, Modifier.weight(.7f))
+        }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// RESULTS
+// HISTORY SECTION
 // ─────────────────────────────────────────────────────────────────
 
 @Composable
-fun ResultsSection(result: StructureResult) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Summary header
-        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)) {
-            Row(modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text("Net Volume", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimary.copy(0.8f))
-                    Text(String.format("%.3f m³", result.netVolume), fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onPrimary)
-                }
-                Column {
-                    Text("Net Area", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimary.copy(0.8f))
-                    Text(String.format("%.2f m²", result.netArea), fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onPrimary)
-                }
-                result.grandTotal?.let {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("Est. Cost", fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimary.copy(0.8f))
-                        Text("₹${String.format("%,.0f", it)}", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onPrimary)
+fun HistorySection(viewModel: CalculatorViewModel) {
+    val history by viewModel.history.collectAsState()
+    val sdf = remember { SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()) }
+    if (history.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text("Calculation History", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            TextButton({ viewModel.clearHistory() }) { Text("Clear All", color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
+        }
+        history.forEach { entry ->
+            var expanded by remember { mutableStateOf(false) }
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), elevation = CardDefaults.cardElevation(2.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(entry.result.label.ifBlank { entry.result.structureType }, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            Text(sdf.format(Date(entry.id)), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(.5f))
+                        }
+                        Text(String.format("%.2f m\u00b3", entry.result.netVolume), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
+                        entry.result.grandTotal?.let { Text("\u20b9${String.format("%,.0f", it)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = GreenDark, modifier = Modifier.padding(end = 6.dp)) }
+                        IconButton({ expanded = !expanded }, modifier = Modifier.size(32.dp)) { Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, Modifier.size(18.dp)) }
+                        IconButton({ viewModel.deleteHistory(entry.id) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) }
+                    }
+                    AnimatedVisibility(expanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                        Column(modifier = Modifier.padding(top = 8.dp)) {
+                            HorizontalDivider(); Spacer(Modifier.height(8.dp))
+                            Text("Wastage: +${entry.result.wastagePercent}%", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(.6f))
+                            Spacer(Modifier.height(4.dp))
+                            entry.result.materials.forEach { mat ->
+                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(mat.name, fontSize = 13.sp)
+                                    Text(String.format("%.1f ${mat.unit}", mat.quantity), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
-        Text("Materials Required", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        result.materials.forEach { MaterialResultRow(it) }
-    }
-}
-
-@Composable
-fun MaterialResultRow(mat: MaterialResult) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(0.dp)) {
-        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(mat.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                if (mat.ratePerUnit != null)
-                    Text("₹${mat.ratePerUnit.toInt()} / ${mat.unit}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.7f))
-                else
-                    Text("Add rate in Standard Rates for cost", fontSize = 11.sp, color = MaterialTheme.colorScheme.error.copy(0.7f))
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    when { mat.quantity >= 1000 -> String.format("%.0f", mat.quantity)
-                        mat.quantity >= 10 -> String.format("%.1f", mat.quantity)
-                        else -> String.format("%.2f", mat.quantity) },
-                    fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
-                Text(mat.unit, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                mat.totalCost?.let { Text("₹${String.format("%,.0f", it)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary) }
             }
         }
     }
@@ -303,8 +480,9 @@ fun MaterialResultRow(mat: MaterialResult) {
 
 @Composable
 fun WallTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: LengthUnit) {
-    var length by remember { mutableStateOf("") }; var height by remember { mutableStateOf("") }
-    var thickness by remember { mutableStateOf("") }
+    var length by remember { mutableStateOf("") }; var height by remember { mutableStateOf("") }; var thickness by remember { mutableStateOf("") }
+    var wallType by remember { mutableStateOf(WallType.BRICK_WALL) }; var mortarRatio by remember { mutableStateOf(MortarRatio.RATIO_1_6) }
+    var wastage by remember { mutableIntStateOf(5) }
     var doorW by remember { mutableStateOf("3") }; var doorH by remember { mutableStateOf("7") }; var doorCount by remember { mutableStateOf("1") }
     var winW by remember { mutableStateOf("4") }; var winH by remember { mutableStateOf("4") }; var winCount by remember { mutableStateOf("2") }
     var result by remember { mutableStateOf<StructureResult?>(null) }
@@ -312,24 +490,158 @@ fun WallTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: Len
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { WallIllustration() }
         item {
+            SectionCard("Wall Type & Mix", OrangePrimary) {
+                GenericDropdown("Wall Type", WallType.entries, wallType, { wallType = it }, { it.label })
+                GenericDropdown("Mortar Ratio", MortarRatio.entries, mortarRatio, { mortarRatio = it }, { it.label })
+                WastageSlider(wastage) { wastage = it }
+            }
+        }
+        item {
             SectionCard("Wall Dimensions") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CalcField("Length", length, { length = it }, unit.shortLabel, Modifier.weight(1f))
                     CalcField("Height", height, { height = it }, unit.shortLabel, Modifier.weight(1f))
                 }
-                CalcField("Thickness", thickness, { thickness = it }, unit.shortLabel, Modifier.fillMaxWidth())
+                ThicknessDropdown("Thickness", thickness, { thickness = it }, unit, Modifier.fillMaxWidth())
             }
         }
-        item { OpeningsCard(doorW,{doorW=it},doorH,{doorH=it},doorCount,{doorCount=it},winW,{winW=it},winH,{winH=it},winCount,{winCount=it},unit) }
+        item { OpeningsCard(doorW, { doorW = it }, doorH, { doorH = it }, doorCount, { doorCount = it }, winW, { winW = it }, winH, { winH = it }, winCount, { winCount = it }, unit) }
         item {
             CalcButton {
-                result = viewModel.calculateWall(
-                    length.toDoubleOrNull()?:0.0, height.toDoubleOrNull()?:0.0, thickness.toDoubleOrNull()?:0.0,
-                    doorW.toDoubleOrNull()?:0.0, doorH.toDoubleOrNull()?:0.0, doorCount.toIntOrNull()?:0,
-                    winW.toDoubleOrNull()?:0.0, winH.toDoubleOrNull()?:0.0, winCount.toIntOrNull()?:0, unit, rates)
+                val r = viewModel.calculateWall(
+                    length.toDoubleOrNull() ?: 0.0, height.toDoubleOrNull() ?: 0.0, thickness.toDoubleOrNull() ?: 0.0,
+                    doorW.toDoubleOrNull() ?: 0.0, doorH.toDoubleOrNull() ?: 0.0, doorCount.toIntOrNull() ?: 0,
+                    winW.toDoubleOrNull() ?: 0.0, winH.toDoubleOrNull() ?: 0.0, winCount.toIntOrNull() ?: 0,
+                    unit, rates, wallType, mortarRatio, wastage)
+                result = r; viewModel.addToHistory(r)
             }
         }
-        result?.let { item { ResultsSection(it) } }
+        result?.let { item { WallResultSection(it) } }
+        item { HistorySection(viewModel) }
+        item { Spacer(Modifier.height(80.dp)) }
+    }
+}
+
+@Composable
+fun WallResultSection(result: StructureResult) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = OrangePrimary)) {
+            Row(modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                ResultStat("Net Volume", String.format("%.3f m\u00b3", result.netVolume), Color.White)
+                ResultStat("Net Area",   String.format("%.2f m\u00b2", result.netArea), Color.White)
+                result.grandTotal?.let { ResultStat("Est. Cost", "\u20b9${String.format("%,.0f", it)}", Color(0xFFFFEB3B)) }
+            }
+        }
+        Text("Materials Required", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        result.materials.forEach { MatRow(it) }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SLAB TAB
+// ─────────────────────────────────────────────────────────────────
+
+@Composable
+fun SlabTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: LengthUnit) {
+    var length by remember { mutableStateOf("") }; var width by remember { mutableStateOf("") }; var thickness by remember { mutableStateOf("") }
+    var slabType by remember { mutableStateOf(SlabType.ROOF_SLAB) }
+    var grade by remember { mutableStateOf(ConcreteGrade.M20) }
+    var steelPct by remember { mutableStateOf("1.0") }
+    var wastage by remember { mutableIntStateOf(5) }
+    var result by remember { mutableStateOf<SlabResult?>(null) }
+
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { SlabIllustration() }
+        // Slab type tabs
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SlabType.entries.forEach { st ->
+                    val sel = slabType == st
+                    val bg by animateColorAsState(if (sel) BluePrimary else MaterialTheme.colorScheme.surfaceVariant, label = "sl")
+                    val tc by animateColorAsState(if (sel) Color.White else MaterialTheme.colorScheme.onSurface, label = "slT")
+                    Surface(shape = RoundedCornerShape(12.dp), color = bg,
+                        modifier = Modifier.weight(1f).clickable { slabType = st }) {
+                        Text(st.label, textAlign = TextAlign.Center, color = tc,
+                            fontSize = 11.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier.padding(10.dp))
+                    }
+                }
+            }
+        }
+        item {
+            SectionCard("Concrete & Steel", BluePrimary) {
+                GenericDropdown("Concrete Grade", ConcreteGrade.entries, grade, { grade = it }, { "${it.label} (${it.mixLabel})" })
+                OutlinedTextField(value = steelPct, onValueChange = { steelPct = it },
+                    label = { Text("Steel % of concrete volume") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                WastageSlider(wastage) { wastage = it }
+            }
+        }
+        item {
+            SectionCard("Slab Dimensions") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CalcField("Length", length, { length = it }, unit.shortLabel, Modifier.weight(1f))
+                    CalcField("Width",  width,  { width = it  }, unit.shortLabel, Modifier.weight(1f))
+                }
+                ThicknessDropdown("Slab Thickness", thickness, { thickness = it }, unit, Modifier.fillMaxWidth())
+            }
+        }
+        item {
+            CalcButton {
+                result = viewModel.calculateSlab(
+                    length.toDoubleOrNull() ?: 0.0, width.toDoubleOrNull() ?: 0.0,
+                    thickness.toDoubleOrNull() ?: 0.0, unit, rates, slabType, grade,
+                    steelPct.toDoubleOrNull() ?: 1.0, wastage)
+            }
+        }
+        result?.let { r ->
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    r.totalCost?.let {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = GreenDark)) {
+                            Column(modifier = Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Total Estimated Cost", fontSize = 12.sp, color = Color.White.copy(.8f))
+                                Text("\u20b9${String.format("%,.0f", it)}", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                                Text("Including +${r.wastagePercent}% wastage", fontSize = 11.sp, color = Color.White.copy(.7f))
+                            }
+                        }
+                    }
+                    SectionCard("Input Summary", BluePrimary) {
+                        StatRow("Slab Type",  r.slabType.label)
+                        StatRow("Grade",      "${r.grade.label} (${r.grade.mixLabel})")
+                        StatRow("Steel %",    "${r.steelPercent}% of volume")
+                        StatRow("Wastage",    "+${r.wastagePercent}%")
+                    }
+                    SectionCard("Quantities") {
+                        StatRow("Slab Area",        String.format("%.2f m\u00b2", r.area))
+                        StatRow("Slab Volume",       String.format("%.3f m\u00b3", r.volume))
+                        StatRow("Cement",            String.format("%.1f bags", r.cementBags))
+                        StatRow("Sand (Fine)",       String.format("%.3f m\u00b3", r.sandM3))
+                        StatRow("Aggregate (CA)",    String.format("%.3f m\u00b3", r.aggM3))
+                        StatRow("Steel / Rebar",     String.format("%.1f kg", r.steelKg))
+                        StatRow("Water (approx.)",   String.format("%.0f litres", r.waterLitres))
+                    }
+                    r.totalCost?.let {
+                        SectionCard("Cost Breakdown", GreenDark) {
+                            CostRow("Cement",    r.cementBags, "bags", r.cementCost)
+                            CostRow("Sand",      r.sandM3,     "m\u00b3",    r.sandCost)
+                            CostRow("Aggregate", r.aggM3,      "m\u00b3",    r.aggCost)
+                            CostRow("Steel",     r.steelKg,    "kg",   r.steelCost)
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("TOTAL", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                                Text("\u20b9${String.format("%,.0f", it)}", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = GreenDark)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item { HistorySection(viewModel) }
         item { Spacer(Modifier.height(80.dp)) }
     }
 }
@@ -342,72 +654,126 @@ fun WallTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: Len
 fun RoomTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: LengthUnit) {
     var length by remember { mutableStateOf("") }; var width by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }; var thickness by remember { mutableStateOf("") }
+    var roomType    by remember { mutableStateOf(RoomType.BEDROOM) }
+    var brickType   by remember { mutableStateOf(BrickType.RED_BRICK) }
+    var mortarRatio by remember { mutableStateOf(MortarRatio.RATIO_1_6) }
+    var flooringType by remember { mutableStateOf(FlooringType.VITRIFIED) }
+    var wastage     by remember { mutableIntStateOf(5) }
     var doorW by remember { mutableStateOf("3") }; var doorH by remember { mutableStateOf("7") }; var doorCount by remember { mutableStateOf("1") }
-    var winW by remember { mutableStateOf("4") }; var winH by remember { mutableStateOf("4") }; var winCount by remember { mutableStateOf("2") }
-    var result by remember { mutableStateOf<StructureResult?>(null) }
+    var winW  by remember { mutableStateOf("4") }; var winH  by remember { mutableStateOf("4") }; var winCount  by remember { mutableStateOf("2") }
+    var showPicker  by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<RoomResult?>(null) }
+
+    if (showPicker) BrickPickerDialog(brickType, { showPicker = false }, { brickType = it })
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { RoomIllustration() }
+        // Room type row
+        item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(RoomType.entries) { rt ->
+                    val sel = roomType == rt
+                    val bg by animateColorAsState(if (sel) OrangePrimary else MaterialTheme.colorScheme.surfaceVariant, label = "rt")
+                    val tc by animateColorAsState(if (sel) Color.White else MaterialTheme.colorScheme.onSurface, label = "rtT")
+                    Surface(shape = RoundedCornerShape(12.dp), color = bg, modifier = Modifier.clickable { roomType = rt }) {
+                        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(rt.icon, fontSize = 20.sp)
+                            Text(rt.label, color = tc, fontSize = 12.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            }
+        }
         item {
             SectionCard("Room Dimensions") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CalcField("Length", length, { length = it }, unit.shortLabel, Modifier.weight(1f))
-                    CalcField("Width", width, { width = it }, unit.shortLabel, Modifier.weight(1f))
+                    CalcField("Width",  width,  { width = it  }, unit.shortLabel, Modifier.weight(1f))
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CalcField("Height", height, { height = it }, unit.shortLabel, Modifier.weight(1f))
-                    CalcField("Wall Thickness", thickness, { thickness = it }, unit.shortLabel, Modifier.weight(1f))
-                }
+                CalcField("Height", height, { height = it }, unit.shortLabel, Modifier.fillMaxWidth())
+                ThicknessDropdown("Wall Thickness", thickness, { thickness = it }, unit, Modifier.fillMaxWidth())
             }
         }
-        item { OpeningsCard(doorW,{doorW=it},doorH,{doorH=it},doorCount,{doorCount=it},winW,{winW=it},winH,{winH=it},winCount,{winCount=it},unit) }
+        item { OpeningsCard(doorW, { doorW = it }, doorH, { doorH = it }, doorCount, { doorCount = it }, winW, { winW = it }, winH, { winH = it }, winCount, { winCount = it }, unit) }
         item {
-            CalcButton {
+            SectionCard("Material Settings", OrangePrimary) {
+                // Brick picker button
+                Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth().clickable { showPicker = true }) {
+                    Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(brickType.emoji, fontSize = 22.sp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Brick Type", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(brickType.label, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(brickType.sizeLabel, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                        }
+                        Icon(Icons.Default.ChevronRight, null, Modifier.size(20.dp))
+                    }
+                }
+                GenericDropdown("Mortar Ratio", MortarRatio.entries, mortarRatio, { mortarRatio = it }, { it.label })
+                GenericDropdown("Flooring Type", FlooringType.entries, flooringType, { flooringType = it }, { it.label })
+                WastageSlider(wastage) { wastage = it }
+            }
+        }
+        item {
+            CalcButton("Calculate Room") {
                 result = viewModel.calculateRoom(
-                    length.toDoubleOrNull()?:0.0, width.toDoubleOrNull()?:0.0,
-                    height.toDoubleOrNull()?:0.0, thickness.toDoubleOrNull()?:0.0,
-                    doorW.toDoubleOrNull()?:0.0, doorH.toDoubleOrNull()?:0.0, doorCount.toIntOrNull()?:0,
-                    winW.toDoubleOrNull()?:0.0, winH.toDoubleOrNull()?:0.0, winCount.toIntOrNull()?:0, unit, rates)
+                    length.toDoubleOrNull() ?: 0.0, width.toDoubleOrNull() ?: 0.0,
+                    height.toDoubleOrNull() ?: 0.0, thickness.toDoubleOrNull() ?: 0.0,
+                    doorW.toDoubleOrNull() ?: 0.0, doorH.toDoubleOrNull() ?: 0.0, doorCount.toIntOrNull() ?: 0,
+                    winW.toDoubleOrNull() ?: 0.0, winH.toDoubleOrNull() ?: 0.0, winCount.toIntOrNull() ?: 0,
+                    unit, rates, roomType, brickType, mortarRatio, flooringType, wastage)
             }
         }
-        result?.let { item { ResultsSection(it) } }
-        item { Spacer(Modifier.height(80.dp)) }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────
-// SLAB TAB
-// ─────────────────────────────────────────────────────────────────
-
-@Composable
-fun SlabTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: LengthUnit) {
-    var length by remember { mutableStateOf("") }; var width by remember { mutableStateOf("") }
-    var thickness by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf<StructureResult?>(null) }
-
-    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { SlabIllustration() }
-        item {
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("M20 RCC mix (1:1.5:3)  ·  Steel ~80 kg/m³", fontSize = 12.sp, color = MaterialTheme.colorScheme.onTertiaryContainer)
+        result?.let { r ->
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    r.totalCost?.let {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = GreenDark)) {
+                            Column(modifier = Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Total Estimated Cost", fontSize = 12.sp, color = Color.White.copy(.8f))
+                                Text("\u20b9${String.format("%,.0f", it)}", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                                Text("${r.roomType.icon} ${r.roomType.label}  \u00b7  +${r.wastagePercent}% wastage", fontSize = 11.sp, color = Color.White.copy(.7f))
+                            }
+                        }
+                    }
+                    SectionCard("Areas") {
+                        StatRow("Total Wall Area",  String.format("%.2f m\u00b2", r.wallArea))
+                        StatRow("Floor Area",       String.format("%.2f m\u00b2", r.floorArea))
+                        StatRow("Ceiling Area",     String.format("%.2f m\u00b2", r.ceilingArea))
+                        StatRow("Paint Area",       String.format("%.2f m\u00b2", r.paintArea))
+                        StatRow("Wall Volume",      String.format("%.3f m\u00b3", r.wallVolume))
+                    }
+                    SectionCard("Masonry Quantities") {
+                        StatRow(r.brickType.unitName, String.format("%.0f pieces", r.brickCount))
+                        StatRow("Cement",            String.format("%.1f bags",    r.cementBags))
+                        StatRow("Sand",              String.format("%.3f m\u00b3", r.sandM3))
+                        StatRow("Water (approx.)",   String.format("%.0f litres",  r.waterLitres))
+                        if (r.flooringType != FlooringType.NONE)
+                            StatRow("Flooring Tiles", String.format("%.0f tiles", r.flooringTiles))
+                    }
+                    SectionCard("Cost Breakdown", GreenDark) {
+                        CostRow(r.brickType.unitName, r.brickCount,    "pieces", r.brickCost)
+                        CostRow("Cement",             r.cementBags,    "bags",   r.cementCost)
+                        CostRow("Sand",               r.sandM3,        "m\u00b3",      r.sandCost)
+                        if (r.flooringType != FlooringType.NONE)
+                            CostRow("Flooring", r.flooringTiles, "tiles", r.flooringCost)
+                        r.paintCost?.let { CostRow("Paint", r.paintArea, "m\u00b2", r.paintCost) }
+                        CostRow("Labor (est.)", r.wallArea, "m\u00b2", r.laborCost)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        r.totalCost?.let {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("TOTAL", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                                Text("\u20b9${String.format("%,.0f", it)}", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = GreenDark)
+                            }
+                        }
+                    }
                 }
             }
         }
-        item {
-            SectionCard("Slab Dimensions") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CalcField("Length", length, { length = it }, unit.shortLabel, Modifier.weight(1f))
-                    CalcField("Width", width, { width = it }, unit.shortLabel, Modifier.weight(1f))
-                }
-                CalcField("Thickness (e.g. 5 in / 125 mm)", thickness, { thickness = it }, unit.shortLabel, Modifier.fillMaxWidth())
-            }
-        }
-        item { CalcButton { result = viewModel.calculateSlab(length.toDoubleOrNull()?:0.0, width.toDoubleOrNull()?:0.0, thickness.toDoubleOrNull()?:0.0, unit, rates) } }
-        result?.let { item { ResultsSection(it) } }
+        item { HistorySection(viewModel) }
         item { Spacer(Modifier.height(80.dp)) }
     }
 }
@@ -420,7 +786,7 @@ fun SlabTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: Len
 fun ColumnTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: LengthUnit) {
     var dim1 by remember { mutableStateOf("") }; var dim2 by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }; var count by remember { mutableStateOf("1") }
-    var isCircular by remember { mutableStateOf(false) }
+    var isCircular by remember { mutableStateOf(false) }; var wastage by remember { mutableIntStateOf(5) }
     var result by remember { mutableStateOf<StructureResult?>(null) }
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -429,19 +795,20 @@ fun ColumnTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: L
             Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Info, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
                     Spacer(Modifier.width(8.dp))
-                    Text("M20 RCC mix (1:1.5:3)  ·  Steel ~160 kg/m³", fontSize = 12.sp, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    Text("M20 RCC mix (1:1.5:3)  \u00b7  Steel ~160 kg/m\u00b3", fontSize = 12.sp, color = MaterialTheme.colorScheme.onTertiaryContainer)
                 }
             }
         }
+        item { SectionCard("Wastage") { WastageSlider(wastage) { wastage = it } } }
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf(false to "Rectangular", true to "Circular").forEach { (circ, label) ->
+                listOf(false to "Rectangular", true to "Circular").forEach { (circ, lbl) ->
                     FilterChip(selected = isCircular == circ, onClick = { isCircular = circ },
-                        label = { Text(label, fontWeight = if (isCircular == circ) FontWeight.Bold else FontWeight.Normal) },
+                        label = { Text(lbl, fontWeight = if (isCircular == circ) FontWeight.Bold else FontWeight.Normal) },
                         modifier = Modifier.weight(1f),
-                        leadingIcon = { Icon(if (circ) Icons.Default.RadioButtonChecked else Icons.Default.CropSquare, contentDescription = null, modifier = Modifier.size(16.dp)) })
+                        leadingIcon = { Icon(if (circ) Icons.Default.RadioButtonChecked else Icons.Default.CropSquare, null, Modifier.size(16.dp)) })
                 }
             }
         }
@@ -459,11 +826,71 @@ fun ColumnTab(viewModel: CalculatorViewModel, rates: List<MaterialRate>, unit: L
         }
         item {
             CalcButton {
-                result = viewModel.calculateColumn(dim1.toDoubleOrNull()?:0.0, dim2.toDoubleOrNull()?:0.0,
-                    height.toDoubleOrNull()?:0.0, count.toIntOrNull()?:1, isCircular, unit, rates)
+                val r = viewModel.calculateColumn(
+                    dim1.toDoubleOrNull() ?: 0.0, dim2.toDoubleOrNull() ?: 0.0,
+                    height.toDoubleOrNull() ?: 0.0, count.toIntOrNull() ?: 1, isCircular, unit, rates, wastage)
+                result = r; viewModel.addToHistory(r)
             }
         }
-        result?.let { item { ResultsSection(it) } }
+        result?.let { item { WallResultSection(it) } }
+        item { HistorySection(viewModel) }
         item { Spacer(Modifier.height(80.dp)) }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SMALL RESULT HELPERS
+// ─────────────────────────────────────────────────────────────────
+
+@Composable
+fun ResultStat(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, fontSize = 10.sp, color = color.copy(.8f))
+        Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = color)
+    }
+}
+
+@Composable
+fun MatRow(mat: MaterialResult) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(0.dp)) {
+        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(mat.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                if (mat.ratePerUnit != null)
+                    Text("\u20b9${mat.ratePerUnit.toInt()} / ${mat.unit}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(.7f))
+                else
+                    Text("Add rate in Standard Rates", fontSize = 11.sp, color = MaterialTheme.colorScheme.error.copy(.7f))
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(when { mat.quantity >= 1000 -> String.format("%.0f", mat.quantity)
+                    mat.quantity >= 10 -> String.format("%.1f", mat.quantity)
+                    else -> String.format("%.2f", mat.quantity) },
+                    fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                Text(mat.unit, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                mat.totalCost?.let { Text("\u20b9${String.format("%,.0f", it)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = GreenDark) }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(.7f))
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+fun CostRow(name: String, qty: Double, unit: String, cost: Double?) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(name, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Text(String.format("%.1f", qty) + " $unit", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(.55f), modifier = Modifier.padding(end = 12.dp))
+        Text(cost?.let { "\u20b9${String.format("%,.0f", it)}" } ?: "\u2014",
+            fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+            color = if (cost != null) GreenDark else MaterialTheme.colorScheme.onSurface.copy(.4f))
     }
 }
