@@ -198,6 +198,7 @@ fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier, val
 fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMode: Boolean) {
     val worker = workerState.worker
     val initials = worker.name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
+    var showPaymentDialog by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -239,29 +240,6 @@ fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMod
                             viewModel.markAttendance(worker.id, next)
                         }
                     )
-                } else {
-                    var showPaymentDialog by remember { mutableStateOf(false) }
-                    Button(
-                        onClick = { showPaymentDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Icon(Icons.Default.Payment, contentDescription = "Pay", modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Pay", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                    if (showPaymentDialog) {
-                        PaymentDialog(
-                            workerName = worker.name,
-                            balance = workerState.balance,
-                            onDismiss = { showPaymentDialog = false },
-                            onConfirm = { amount, mode ->
-                                viewModel.addPayment(worker.id, amount, mode)
-                                showPaymentDialog = false
-                            }
-                        )
-                    }
                 }
             }
 
@@ -275,7 +253,33 @@ fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMod
                 WorkerStat("Paid", "₹${workerState.totalPaid.toInt()}", AttendanceAbsent)
                 WorkerStat("Balance", "₹${workerState.balance.toInt()}", PrimaryOrange)
             }
+
+            if (isPaymentMode) {
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = { showPaymentDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Add Payment / Advance", fontWeight = FontWeight.Bold)
+                }
+            }
         }
+    }
+
+    if (showPaymentDialog) {
+        PaymentDialog(
+            workerName = worker.name,
+            balance = workerState.balance,
+            onDismiss = { showPaymentDialog = false },
+            onConfirm = { amount, mode ->
+                viewModel.addPayment(worker.id, amount, mode)
+                showPaymentDialog = false
+            }
+        )
     }
 }
 
