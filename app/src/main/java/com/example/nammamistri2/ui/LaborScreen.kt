@@ -33,7 +33,7 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LaborScreen(viewModel: LaborViewModel = viewModel()) {
+fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}) {
     val workerStates by viewModel.workerStates.collectAsState(initial = emptyList())
     val teamSummary by viewModel.teamSummary.collectAsState(initial = TeamSummary())
     val selectedDate by viewModel.selectedDate.collectAsState()
@@ -43,6 +43,20 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel()) {
     val context = LocalContext.current
     
     var showAddWorkerDialog by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
+    var sortOption by remember { mutableStateOf("Name A-Z") }
+    val sortOptions = listOf("Name A-Z", "Name Z-A", "Balance High-Low", "Balance Low-High", "Earned High-Low")
+
+    val sortedWorkerStates = remember(workerStates, sortOption) {
+        when (sortOption) {
+            "Name A-Z" -> workerStates.sortedBy { it.worker.name }
+            "Name Z-A" -> workerStates.sortedByDescending { it.worker.name }
+            "Balance High-Low" -> workerStates.sortedByDescending { it.balance }
+            "Balance Low-High" -> workerStates.sortedBy { it.balance }
+            "Earned High-Low" -> workerStates.sortedByDescending { it.totalEarned }
+            else -> workerStates
+        }
+    }
 
     val dateStr = SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(Date(selectedDate))
 
@@ -56,13 +70,46 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel()) {
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back */ }) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextDark)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Filter */ }) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = PrimaryOrange)
+                    Box {
+                        IconButton(onClick = { showSortMenu = true }) {
+                            Icon(Icons.Default.FilterList, contentDescription = "Sort", tint = PrimaryOrange)
+                        }
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            Text(
+                                "Sort Workers By",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = TextGray,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                            sortOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            if (sortOption == option) {
+                                                Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryOrange, modifier = Modifier.size(16.dp))
+                                                Spacer(Modifier.width(8.dp))
+                                            } else {
+                                                Spacer(Modifier.width(24.dp))
+                                            }
+                                            Text(option, fontSize = 14.sp)
+                                        }
+                                    },
+                                    onClick = {
+                                        sortOption = option
+                                        showSortMenu = false
+                                    }
+                                )
+                            }
+                        }
                     }
                     IconButton(onClick = {
                         val calendar = Calendar.getInstance().apply { timeInMillis = selectedDate }
@@ -136,17 +183,21 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel()) {
 
                 when (selectedTab) {
                     0, 1 -> {
-                        items(workerStates) { state ->
+                        if (selectedTab == 0) {
+                            item { AttendanceDateBanner(selectedDate) }
+                        }
+                        items(sortedWorkerStates) { state ->
                             WorkerCard(
                                 workerState = state,
                                 viewModel = viewModel,
-                                isPaymentMode = selectedTab == 1
+                                isPaymentMode = selectedTab == 1,
+                                selectedDate = selectedDate
                             )
                         }
                     }
                     2 -> {
                         item { SummaryDetailSection(teamSummary) }
-                        items(workerStates) { state ->
+                        items(sortedWorkerStates) { state ->
                             WorkerDetailCard(state)
                         }
                     }
@@ -198,10 +249,41 @@ fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier, val
 }
 
 @Composable
-fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMode: Boolean) {
+fun AttendanceDateBanner(selectedDate: Long) {
+    val dayName = SimpleDateFormat("EEEE", Locale.getDefault()).format(Date(selectedDate))
+    val dateStr = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date(selectedDate))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = PrimaryOrange),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(dayName, fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Medium)
+                Text(dateStr, fontSize = 15.sp, color = Color.White, fontWeight = FontWeight.ExtraBold)
+            }
+            Spacer(Modifier.weight(1f))
+            Text("Tap calendar to change", fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f))
+        }
+    }
+}
+
+@Composable
+fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMode: Boolean, selectedDate: Long = System.currentTimeMillis()) {
     val worker = workerState.worker
     val initials = worker.name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
     var showPaymentDialog by remember { mutableStateOf(false) }
+    var showHistory by remember { mutableStateOf(false) }
+
+    val attendanceEntries = remember(workerState.allEntries) {
+        workerState.allEntries.filter { it.paymentMode == null }.sortedByDescending { it.date }
+    }
+    val sdfDay = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
 
     Card(
         modifier = Modifier
@@ -246,6 +328,26 @@ fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMod
                 }
             }
 
+            // Show selected date + marked status in attendance mode
+            if (!isPaymentMode) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        sdfDay.format(Date(selectedDate)),
+                        fontSize = 11.sp,
+                        color = TextGray
+                    )
+                    if (workerState.todayEntry == null) {
+                        Text("Not marked yet", fontSize = 11.sp, color = TextGray)
+                    }
+                }
+            }
+            }
+
             Spacer(Modifier.height(16.dp))
             HorizontalDivider(color = BackgroundCream, thickness = 1.dp)
             Spacer(Modifier.height(12.dp))
@@ -268,6 +370,54 @@ fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMod
                     Icon(Icons.Default.Payment, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Add Payment / Advance", fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Attendance history toggle (attendance tab only)
+            if (!isPaymentMode && attendanceEntries.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                TextButton(
+                    onClick = { showHistory = !showHistory },
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        if (showHistory) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = PrimaryOrange,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        if (showHistory) "Hide history" else "View attendance history (${attendanceEntries.size} days)",
+                        fontSize = 12.sp,
+                        color = PrimaryOrange,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                if (showHistory) {
+                    Spacer(Modifier.height(4.dp))
+                    attendanceEntries.forEach { entry ->
+                        val (statusLabel, statusColor) = when (entry.attendance) {
+                            1.0 -> "Present" to AttendancePresent
+                            0.5 -> "Half Day" to AttendanceHalfDay
+                            else -> "Absent" to AttendanceAbsent
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(sdfDay.format(Date(entry.date)), fontSize = 12.sp, color = TextDark)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(statusColor.copy(alpha = 0.15f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(statusLabel, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = statusColor)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -493,7 +643,7 @@ fun WorkerDetailCard(workerState: WorkerState) {
     val initials = worker.name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
     var expanded by remember { mutableStateOf(false) }
 
-    val sdf = SimpleDateFormat("dd MMM, yyyy", Locale.getDefault())
+    val sdf = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
 
     // Separate attendance records from payment records
     val attendanceEntries = workerState.allEntries

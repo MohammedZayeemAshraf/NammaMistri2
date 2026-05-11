@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.animateFloatAsState
@@ -156,13 +157,19 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         ) {
+                            // Intercept system back button: go Home instead of closing the app
+                            if (currentScreen != "Home") {
+                                BackHandler { currentScreen = "Home" }
+                            }
+
                             MainScreen(
                                 repository = repository!!,
                                 currentScreen = currentScreen,
                                 onScreenSelected = { currentScreen = it },
                                 openDrawer = { scope.launch { drawerState.open() } },
                                 selectedSiteId = selectedSiteId,
-                                onSelectSite = { selectedSiteId = it }
+                                onSelectSite = { selectedSiteId = it },
+                                onBack = { currentScreen = "Home" }
                             )
                         }
                     }
@@ -241,7 +248,8 @@ fun MainScreen(
     onScreenSelected: (String) -> Unit,
     openDrawer: () -> Unit,
     selectedSiteId: Long?,
-    onSelectSite: (Long?) -> Unit
+    onSelectSite: (Long?) -> Unit,
+    onBack: () -> Unit
 ) {
     val sites by repository.getAllSites().collectAsState(initial = emptyList())
     val isHome = currentScreen == "Home"
@@ -276,7 +284,7 @@ fun MainScreen(
                     onSaved = { onScreenSelected("Home") }
                 )
                 "Calculator" -> CalculatorScreen(viewModel(factory = CalculatorViewModelFactory(repository)))
-                "Labor" -> LaborScreen(viewModel(factory = LaborViewModelFactory(repository)))
+                "Labor" -> LaborScreen(viewModel = viewModel(factory = LaborViewModelFactory(repository)), onBack = onBack)
                 "Photos" -> PhotoScreen(
                     repository = repository,
                     selectedSiteId = selectedSiteId,
