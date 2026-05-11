@@ -229,27 +229,80 @@ fun WallIllustration() {
 
 @Composable
 fun RoomIllustration() {
-    Canvas(modifier = Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF0F4FF))) {
+    // Professional plan-view cross-section of a room with walls, floor tiles & dimension arrows
+    Canvas(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF0F4FF))) {
         drawIntoCanvas { canvas ->
             val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
-            val m = 46f; val wt = 15f
+            val m = 52f; val wt = 20f
             val oL = m; val oT = m; val oR = w - m; val oB = h - m
             val iL = oL + wt; val iT = oT + wt; val iR = oR - wt; val iB = oB - wt
-            nc.drawRect(iL, iT, iR, iB, android.graphics.Paint().apply { color = Color(0xFFFFF9C4).toArgb() })
-            val gp = android.graphics.Paint().apply { color = android.graphics.Color.argb(45, 180, 160, 0); strokeWidth = 1f }
-            var gx = iL + 26f; while (gx < iR) { nc.drawLine(gx, iT, gx, iB, gp); gx += 26f }
-            var gy = iT + 26f; while (gy < iB) { nc.drawLine(iL, gy, iR, gy, gp); gy += 26f }
-            val wallP = android.graphics.Paint().apply { color = Color(0xFFCFD8DC).toArgb() }
-            nc.drawRect(oL, oT, oR, iT, wallP); nc.drawRect(oL, iB, oR, oB, wallP)
-            nc.drawRect(oL, oT, iL, oB, wallP); nc.drawRect(iR, oT, oR, oB, wallP)
-            val sp = android.graphics.Paint().apply { color = Color(0xFF455A64).toArgb(); strokeWidth = 2f; style = android.graphics.Paint.Style.STROKE }
-            nc.drawRect(oL, oT, oR, oB, sp); nc.drawRect(iL, iT, iR, iB, sp)
+
+            // ── Floor tiles fill ──────────────────────────────────
+            val tileFill = android.graphics.Paint().apply { color = Color(0xFFFFF9C4).toArgb() }
+            nc.drawRect(iL, iT, iR, iB, tileFill)
+            // tile grout lines
+            val tileSize = 28f
+            val grout = android.graphics.Paint().apply { color = android.graphics.Color.argb(80, 120, 110, 50); strokeWidth = 1f }
+            var gx = iL + tileSize; while (gx < iR) { nc.drawLine(gx, iT, gx, iB, grout); gx += tileSize }
+            var gy = iT + tileSize; while (gy < iB) { nc.drawLine(iL, gy, iR, gy, grout); gy += tileSize }
+
+            // ── Walls (cross-hatched) ──────────────────────────────
+            val wallFill = android.graphics.Paint().apply { color = Color(0xFFCFD8DC).toArgb() }
+            nc.drawRect(oL, oT, oR, iT, wallFill)
+            nc.drawRect(oL, iB, oR, oB, wallFill)
+            nc.drawRect(oL, oT, iL, oB, wallFill)
+            nc.drawRect(iR, oT, oR, oB, wallFill)
+            // hatch pattern on walls
+            val hatch = android.graphics.Paint().apply { color = android.graphics.Color.argb(70, 55, 71, 79); strokeWidth = 1f }
+            val hs = 7f
+            // top wall
+            var hi = oL; while (hi < oR + h) { nc.drawLine(hi, oT, hi - wt, oT + wt, hatch); hi += hs }
+            // bottom wall
+            hi = oL; while (hi < oR + h) { nc.drawLine(hi, iB, hi - wt, oB, hatch); hi += hs }
+            // left wall
+            hi = oT; while (hi < oB + w) { nc.drawLine(oL, hi, iL, hi + wt, hatch); hi += hs }
+            // right wall
+            hi = oT; while (hi < oB + w) { nc.drawLine(iR, hi, oR, hi + wt, hatch); hi += hs }
+
+            // Door opening on bottom wall
+            val doorW = 36f
+            val dL = (oL + iL) / 2f; val dR = dL + doorW
+            // blank door gap
+            nc.drawRect(dL, iB, dR, oB, android.graphics.Paint().apply { color = Color(0xFFF0F4FF).toArgb() })
+            // door swing arc
+            val doorArc = android.graphics.Paint().apply { color = Color(0xFFFF8F00).toArgb(); strokeWidth = 1.8f; style = android.graphics.Paint.Style.STROKE }
+            val doorRect = android.graphics.RectF(dL, iB - doorW, dL + doorW * 2, iB + doorW)
+            nc.drawArc(doorRect, 180f, 90f, false, doorArc)
+            nc.drawLine(dL, iB, dR, iB, doorArc)
+
+            // Window opening on right wall
+            val winH2 = 28f; val winY = (oT + oB) / 2f - winH2 / 2
+            nc.drawRect(iR, winY, oR, winY + winH2, android.graphics.Paint().apply { color = Color(0xFFF0F4FF).toArgb() })
+            val winPaint = android.graphics.Paint().apply { color = Color(0xFF2196F3).toArgb(); strokeWidth = 1.5f; style = android.graphics.Paint.Style.STROKE }
+            nc.drawRect(iR, winY, oR, winY + winH2, winPaint)
+            nc.drawLine((iR + oR) / 2f, winY, (iR + oR) / 2f, winY + winH2, winPaint)
+
+            // Outer + inner border
+            val border = android.graphics.Paint().apply { color = Color(0xFF37474F).toArgb(); strokeWidth = 2.2f; style = android.graphics.Paint.Style.STROKE }
+            nc.drawRect(oL, oT, oR, oB, border)
+            val innerBorder = android.graphics.Paint().apply { color = Color(0xFF546E7A).toArgb(); strokeWidth = 1f; style = android.graphics.Paint.Style.STROKE }
+            nc.drawRect(iL, iT, iR, iB, innerBorder)
+
+            // Label inside room
+            val roomLabelP = android.graphics.Paint().apply {
+                color = Color(0xFF78909C).toArgb(); textSize = 24f
+                textAlign = android.graphics.Paint.Align.CENTER
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.ITALIC)
+            }
+            nc.drawText("Room (Plan View)", (iL + iR) / 2f, (iT + iB) / 2f + 8f, roomLabelP)
+
+            // Dimension arrows
             val dp = android.graphics.Paint().apply { color = BluePrimary.toArgb(); strokeWidth = 1.8f }
-            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 26f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 24f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
             nc.drawDim(oL, oB + 14f, oR, oB + 14f, "Length (L)", lp, dp)
             val rH = oB - oT
-            nc.save(); nc.rotate(-90f, oR + 14f, (oT + oB) / 2f)
-            nc.drawDim(oR + 14f - rH / 2, (oT + oB) / 2f, oR + 14f + rH / 2, (oT + oB) / 2f, "Width (W)", lp, dp)
+            nc.save(); nc.rotate(-90f, oL - 14f, (oT + oB) / 2f)
+            nc.drawDim(oL - 14f - rH / 2, (oT + oB) / 2f, oL - 14f + rH / 2, (oT + oB) / 2f, "Width (W)", lp, dp)
             nc.restore()
         }
     }
@@ -257,50 +310,195 @@ fun RoomIllustration() {
 
 @Composable
 fun SlabIllustration() {
-    Canvas(modifier = Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF5F5F5))) {
+    // Professional RCC slab cross-section: concrete body + cover zones + main bars + distribution bars + dimension callouts
+    Canvas(modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF4F4EE))) {
         drawIntoCanvas { canvas ->
             val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
-            val sL = 55f; val sR = w - 80f; val sT = 55f; val sB = sT + 38f
-            val offX = 36f; val offY = -28f
-            val topPath = android.graphics.Path().apply {
-                moveTo(sL + offX, sT + offY); lineTo(sR + offX, sT + offY)
-                lineTo(sR, sT); lineTo(sL, sT); close()
+            val cover = 20f          // concrete cover px
+            val sL = 48f; val sR = w - 48f; val sT = 52f; val sB = h - 60f
+            val slabH = sB - sT
+
+            // ── 1. Concrete body ─────────────────────────────────
+            val concFill = android.graphics.Paint().apply { color = Color(0xFFB0BEC5).toArgb() }
+            nc.drawRect(sL, sT, sR, sB, concFill)
+            // aggregate dots (realistic concrete texture)
+            val aggPaint = android.graphics.Paint().apply { color = Color(0xFF90A4AE).toArgb() }
+            val rng = java.util.Random(42L)
+            for (i in 0 until 55) {
+                val ax = sL + cover + rng.nextFloat() * (sR - sL - cover * 2)
+                val ay = sT + cover + rng.nextFloat() * (slabH - cover * 2)
+                nc.drawCircle(ax, ay, 3f + rng.nextFloat() * 3f, aggPaint)
             }
-            nc.drawPath(topPath, android.graphics.Paint().apply { color = Color(0xFFB0BEC5).toArgb() })
-            nc.drawPath(topPath, android.graphics.Paint().apply { color = android.graphics.Color.DKGRAY; style = android.graphics.Paint.Style.STROKE; strokeWidth = 1.5f })
-            nc.drawRect(sL, sT, sR, sB, android.graphics.Paint().apply { color = Color(0xFF78909C).toArgb() })
-            nc.drawRect(sL, sT, sR, sB, android.graphics.Paint().apply { color = android.graphics.Color.DKGRAY; style = android.graphics.Paint.Style.STROKE; strokeWidth = 1.5f })
-            val rP = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb(); strokeWidth = 2.5f }
-            val rY = sT + (sB - sT) * .65f
-            nc.drawLine(sL + 6f, rY, sR - 6f, rY, rP)
-            val step = (sR - sL) / 7f; for (i in 1..6) nc.drawLine(sL + step * i, sT + 4f, sL + step * i, sB - 4f, rP)
+
+            // ── 2. Cover zone lines (dashed) ─────────────────────
+            val coverPaint = android.graphics.Paint().apply {
+                color = Color(0xFF546E7A).toArgb(); strokeWidth = 1.2f
+                style = android.graphics.Paint.Style.STROKE
+                pathEffect = android.graphics.DashPathEffect(floatArrayOf(6f, 4f), 0f)
+            }
+            nc.drawRect(sL + cover, sT + cover, sR - cover, sB - cover, coverPaint)
+
+            // ── 3. Main reinforcement bars (bottom zone, horizontal) ─
+            val barPaint = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb(); strokeWidth = 4.5f; style = android.graphics.Paint.Style.STROKE; strokeCap = android.graphics.Paint.Cap.ROUND }
+            val mainBarY1 = sB - cover - 5f
+            val mainBarY2 = sB - cover - 16f
+            val barSpacing = (sR - sL - cover * 2) / 5f
+            for (i in 0..5) {
+                val bx = sL + cover + barSpacing * i
+                // draw bar circle (cross-section view)
+                nc.drawCircle(bx, mainBarY1, 5f, android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb() })
+                nc.drawCircle(bx, mainBarY2, 3.5f, android.graphics.Paint().apply { color = Color(0xFFE57373).toArgb() })
+            }
+            // horizontal bar lines (front view bars)
+            val barLinePaint = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb(); strokeWidth = 3.5f; strokeCap = android.graphics.Paint.Cap.ROUND }
+            nc.drawLine(sL + cover, mainBarY1, sR - cover, mainBarY1, barLinePaint)
+            nc.drawLine(sL + cover, mainBarY2, sR - cover, mainBarY2, barLinePaint)
+
+            // ── 4. Distribution bars (top zone, thinner) ─────────
+            val distBarPaint = android.graphics.Paint().apply { color = Color(0xFFEF6C00).toArgb(); strokeWidth = 2f; strokeCap = android.graphics.Paint.Cap.ROUND }
+            val distBarY1 = sT + cover + 5f
+            val distBarY2 = sT + cover + 16f
+            nc.drawLine(sL + cover, distBarY1, sR - cover, distBarY1, distBarPaint)
+            nc.drawLine(sL + cover, distBarY2, sR - cover, distBarY2, distBarPaint)
+            // distribution bar circles
+            val distSpacing = (sR - sL - cover * 2) / 8f
+            for (i in 0..8) {
+                val bx = sL + cover + distSpacing * i
+                nc.drawCircle(bx, distBarY1, 3f, android.graphics.Paint().apply { color = Color(0xFFEF6C00).toArgb() })
+            }
+
+            // ── 5. Thickness callout arrow ────────────────────────
+            val thickPaint = android.graphics.Paint().apply { color = Color(0xFF37474F).toArgb(); strokeWidth = 1.5f }
+            val thickLabelP = android.graphics.Paint().apply { color = Color(0xFF37474F).toArgb(); textSize = 21f; textAlign = android.graphics.Paint.Align.LEFT; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            nc.drawLine(sR + 12f, sT, sR + 12f, sB, thickPaint)
+            nc.drawLine(sR + 8f, sT, sR + 16f, sT, thickPaint)
+            nc.drawLine(sR + 8f, sB, sR + 16f, sB, thickPaint)
+            nc.drawText("D", sR + 16f, (sT + sB) / 2f + 8f, thickLabelP)
+
+            // ── 6. Outer border ───────────────────────────────────
+            val border = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); strokeWidth = 2.5f; style = android.graphics.Paint.Style.STROKE }
+            nc.drawRect(sL, sT, sR, sB, border)
+
+            // ── 7. Legend ─────────────────────────────────────────
+            val legP = android.graphics.Paint().apply { color = Color(0xFF37474F).toArgb(); textSize = 20f }
+            nc.drawCircle(sL + 8f, sB + 20f, 5f, android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb() })
+            nc.drawText("Main bars", sL + 18f, sB + 25f, legP)
+            nc.drawCircle(sL + 105f, sB + 20f, 3.5f, android.graphics.Paint().apply { color = Color(0xFFEF6C00).toArgb() })
+            nc.drawText("Dist. bars", sL + 115f, sB + 25f, legP)
+
+            // ── 8. Dimension arrows ───────────────────────────────
             val dp = android.graphics.Paint().apply { color = BluePrimary.toArgb(); strokeWidth = 1.8f }
-            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 26f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
-            nc.drawDim(sL, sB + 16f, sR, sB + 16f, "Length (L)", lp, dp)
-            nc.save(); nc.rotate(-90f, sR + offX + 14f, (sT + sB) / 2f); nc.drawText("Width (W)", sR + offX - 6f, sT + offY - 6f, lp); nc.restore()
+            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 24f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            nc.drawDim(sL, sT - 16f, sR, sT - 16f, "Length (L)", lp, dp)
         }
     }
 }
 
 @Composable
 fun ColumnIllustration() {
-    Canvas(modifier = Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3E5F5))) {
+    // Professional RCC column cross-section: both elevation + plan views side by side
+    Canvas(modifier = Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3E5F5))) {
         drawIntoCanvas { canvas ->
             val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
-            val cx = w / 2f; val colW = 66f; val colH = h - 55f
-            val cL = cx - colW / 2; val cT = 18f; val cR = cx + colW / 2; val cB = cT + colH
-            nc.drawRect(cL, cT, cR, cB, android.graphics.Paint().apply { color = Color(0xFFB0BEC5).toArgb() })
-            nc.drawRect(cL, cT, cR, cB, android.graphics.Paint().apply { color = Color(0xFF37474F).toArgb(); style = android.graphics.Paint.Style.STROKE; strokeWidth = 2f })
-            val sP = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb(); strokeWidth = 2.5f; style = android.graphics.Paint.Style.STROKE }
-            val sStep = colH / 7f; for (i in 1..6) { val sy = cT + sStep * i; nc.drawRect(cL + 8f, sy - 6f, cR - 8f, sy + 6f, sP) }
-            val rP = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb() }
-            listOf(cL + 13f to cT + 13f, cR - 13f to cT + 13f, cL + 13f to cB - 13f, cR - 13f to cB - 13f).forEach { nc.drawCircle(it.first, it.second, 7f, rP) }
+            val cover = 14f
+
+            // ════════════════════════════════════════════════════
+            // LEFT: ELEVATION VIEW
+            // ════════════════════════════════════════════════════
+            val eL = 44f; val eR = w * 0.47f; val eT = 28f; val eB = h - 48f
+            val colW = eR - eL; val colH = eB - eT
+
+            // concrete body
+            val concFill = android.graphics.Paint().apply { color = Color(0xFFB0BEC5).toArgb() }
+            nc.drawRect(eL, eT, eR, eB, concFill)
+            // aggregate texture
+            val aggP = android.graphics.Paint().apply { color = Color(0xFF90A4AE).toArgb() }
+            val rng = java.util.Random(7L)
+            for (i in 0 until 30) {
+                val ax = eL + cover + rng.nextFloat() * (colW - cover * 2)
+                val ay = eT + cover + rng.nextFloat() * (colH - cover * 2)
+                nc.drawCircle(ax, ay, 2.5f + rng.nextFloat() * 2f, aggP)
+            }
+
+            // 4 corner main bars (elevation — 2 visible lines)
+            val barPaint = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb(); strokeWidth = 4f; strokeCap = android.graphics.Paint.Cap.ROUND }
+            nc.drawLine(eL + cover, eT + cover, eL + cover, eB - cover, barPaint)  // left bar
+            nc.drawLine(eR - cover, eT + cover, eR - cover, eB - cover, barPaint)  // right bar
+
+            // stirrups (rectangular links every ~colH/6)
+            val stirrupPaint = android.graphics.Paint().apply { color = Color(0xFFE53935).toArgb(); strokeWidth = 2.2f; style = android.graphics.Paint.Style.STROKE }
+            val sCount = 7; val sStep = colH / (sCount + 1)
+            for (i in 1..sCount) {
+                val sy = eT + sStep * i
+                nc.drawRect(eL + cover - 2f, sy - 5f, eR - cover + 2f, sy + 5f, stirrupPaint)
+            }
+            // stirrup hook tails at top
+            val hookP = android.graphics.Paint().apply { color = Color(0xFFE53935).toArgb(); strokeWidth = 2f; strokeCap = android.graphics.Paint.Cap.ROUND }
+            nc.drawLine(eL + cover - 2f, eT + sStep - 5f, eL + cover + 8f, eT + sStep - 14f, hookP)
+            nc.drawLine(eR - cover + 2f, eT + sStep - 5f, eR - cover - 8f, eT + sStep - 14f, hookP)
+
+            // outer border
+            nc.drawRect(eL, eT, eR, eB, android.graphics.Paint().apply { color = Color(0xFF37474F).toArgb(); strokeWidth = 2.5f; style = android.graphics.Paint.Style.STROKE })
+
+            // cover dashed lines
+            val cvP = android.graphics.Paint().apply { color = Color(0xFF546E7A).toArgb(); strokeWidth = 1f; style = android.graphics.Paint.Style.STROKE; pathEffect = android.graphics.DashPathEffect(floatArrayOf(5f, 4f), 0f) }
+            nc.drawRect(eL + cover, eT + cover, eR - cover, eB - cover, cvP)
+
+            // ════════════════════════════════════════════════════
+            // RIGHT: CROSS-SECTION (PLAN VIEW)
+            // ════════════════════════════════════════════════════
+            val csL = w * 0.55f; val csR = w - 20f; val csSize = minOf(csR - csL, eB - eT)
+            val csT = eT + (colH - csSize) / 2; val csB = csT + csSize
+            val csCx = (csL + csR) / 2f; val csCy = (csT + csB) / 2f
+
+            // concrete fill
+            nc.drawRect(csL, csT, csR, csB, concFill)
+            // cross-hatch
+            val hatch = android.graphics.Paint().apply { color = android.graphics.Color.argb(55, 55, 71, 79); strokeWidth = 1f }
+            var hi = csL; while (hi < csR + csSize) { nc.drawLine(hi, csT, hi - csSize, csT + csSize, hatch); hi += 7f }
+
+            // 4 corner main bars (circles)
+            val barDot = android.graphics.Paint().apply { color = Color(0xFFBF360C).toArgb() }
+            val barOutline = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); strokeWidth = 1f; style = android.graphics.Paint.Style.STROKE }
+            listOf(csL + cover to csT + cover, csR - cover to csT + cover,
+                   csL + cover to csB - cover, csR - cover to csB - cover).forEach {
+                nc.drawCircle(it.first, it.second, 7f, barDot)
+                nc.drawCircle(it.first, it.second, 7f, barOutline)
+            }
+            // mid bars on each face
+            val midBarPaint = android.graphics.Paint().apply { color = Color(0xFFE57373).toArgb() }
+            listOf(csCx to csT + cover, csCx to csB - cover,
+                   csL + cover to csCy, csR - cover to csCy).forEach {
+                nc.drawCircle(it.first, it.second, 5f, midBarPaint)
+                nc.drawCircle(it.first, it.second, 5f, barOutline)
+            }
+            // stirrup rectangle
+            nc.drawRect(csL + cover - 2f, csT + cover - 2f, csR - cover + 2f, csB - cover + 2f, stirrupPaint)
+            // outer border
+            nc.drawRect(csL, csT, csR, csB, android.graphics.Paint().apply { color = Color(0xFF37474F).toArgb(); strokeWidth = 2.5f; style = android.graphics.Paint.Style.STROKE })
+            // section label
+            val secLabelP = android.graphics.Paint().apply { color = Color(0xFF546E7A).toArgb(); textSize = 18f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            nc.drawText("Section A-A", csCx, csB + 16f, secLabelP)
+
+            // section cut line on elevation
+            val cutLinePaint = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); strokeWidth = 1.8f; pathEffect = android.graphics.DashPathEffect(floatArrayOf(8f, 4f, 2f, 4f), 0f) }
+            val cutY = csCy  // midpoint
+            nc.drawLine(eL - 10f, cutY, eR + 10f, cutY, cutLinePaint)
+            val cutLabelP2 = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 18f; textAlign = android.graphics.Paint.Align.LEFT; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            nc.drawText("A", eL - 10f, cutY - 4f, cutLabelP2)
+            nc.drawText("A", eR + 2f, cutY - 4f, cutLabelP2)
+
+            // ════════════════════════════════════════════════════
+            // DIMENSION ARROWS (elevation)
+            // ════════════════════════════════════════════════════
             val dp = android.graphics.Paint().apply { color = PurpleDark.toArgb(); strokeWidth = 1.8f }
-            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 26f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
-            nc.save(); nc.rotate(-90f, cL - 16f, (cT + cB) / 2f)
-            nc.drawDim(cL - 16f - colH / 2, (cT + cB) / 2f, cL - 16f + colH / 2, (cT + cB) / 2f, "Height (H)", lp, dp)
+            val lp = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 22f; textAlign = android.graphics.Paint.Align.CENTER; typeface = android.graphics.Typeface.DEFAULT_BOLD }
+            // height on left of elevation
+            nc.save(); nc.rotate(-90f, eL - 16f, (eT + eB) / 2f)
+            nc.drawDim(eL - 16f - colH / 2, (eT + eB) / 2f, eL - 16f + colH / 2, (eT + eB) / 2f, "Height (H)", lp, dp)
             nc.restore()
-            nc.drawDim(cL, cB + 16f, cR, cB + 16f, "Width", lp, dp)
+            // width below elevation
+            nc.drawDim(eL, eB + 16f, eR, eB + 16f, "Width (B)", lp, dp)
         }
     }
 }
