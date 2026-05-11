@@ -184,7 +184,21 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
                 when (selectedTab) {
                     0, 1 -> {
                         if (selectedTab == 0) {
-                            item { AttendanceDateBanner(selectedDate) }
+                            item {
+                                AttendanceDateBanner(selectedDate) {
+                                    val calendar = Calendar.getInstance().apply { timeInMillis = selectedDate }
+                                    DatePickerDialog(
+                                        context,
+                                        { _, y, m, d ->
+                                            val newCal = Calendar.getInstance().apply { set(y, m, d) }
+                                            viewModel.selectDate(newCal.timeInMillis)
+                                        },
+                                        calendar.get(Calendar.YEAR),
+                                        calendar.get(Calendar.MONTH),
+                                        calendar.get(Calendar.DAY_OF_MONTH)
+                                    ).show()
+                                }
+                            }
                         }
                         items(sortedWorkerStates) { state ->
                             WorkerCard(
@@ -249,11 +263,13 @@ fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier, val
 }
 
 @Composable
-fun AttendanceDateBanner(selectedDate: Long) {
+fun AttendanceDateBanner(selectedDate: Long, onTap: () -> Unit) {
     val dayName = SimpleDateFormat("EEEE", Locale.getDefault()).format(Date(selectedDate))
     val dateStr = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date(selectedDate))
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onTap() },
         colors = CardDefaults.cardColors(containerColor = PrimaryOrange),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -268,7 +284,11 @@ fun AttendanceDateBanner(selectedDate: Long) {
                 Text(dateStr, fontSize = 15.sp, color = Color.White, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.weight(1f))
-            Text("Tap calendar to change", fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Tap to change", fontSize = 11.sp, color = Color.White.copy(alpha = 0.85f))
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(14.dp))
+            }
         }
     }
 }
