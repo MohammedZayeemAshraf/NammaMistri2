@@ -22,7 +22,8 @@ data class WorkerState(
     val todayEntry: LaborEntry? = null,
     val totalEarned: Double = 0.0,
     val totalPaid: Double = 0.0,
-    val balance: Double = 0.0
+    val balance: Double = 0.0,
+    val allEntries: List<LaborEntry> = emptyList()
 )
 
 class LaborViewModel(private val repository: NammaMistriRepository) : ViewModel() {
@@ -54,7 +55,8 @@ class LaborViewModel(private val repository: NammaMistriRepository) : ViewModel(
                         todayEntry = todayEntry,
                         totalEarned = earnings,
                         totalPaid = paid,
-                        balance = earnings - paid
+                        balance = earnings - paid,
+                        allEntries = entries
                     )
                 }
             }
@@ -117,13 +119,13 @@ class LaborViewModel(private val repository: NammaMistriRepository) : ViewModel(
         }
     }
 
-    fun addPayment(workerId: Long, amount: Double, mode: String) {
+    fun addPayment(workerId: Long, amount: Double, mode: String, date: Long = System.currentTimeMillis()) {
         viewModelScope.launch {
             repository.insertLaborEntry(
                 LaborEntry(
                     workerId = workerId,
-                    date = System.currentTimeMillis(),
-                    attendance = 0.0, // This entry is just for payment
+                    date = date,
+                    attendance = 0.0, // payment-only entry
                     advance = amount,
                     paymentMode = mode
                 )

@@ -146,6 +146,9 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel()) {
                     }
                     2 -> {
                         item { SummaryDetailSection(teamSummary) }
+                        items(workerStates) { state ->
+                            WorkerDetailCard(state)
+                        }
                     }
                 }
                 
@@ -275,8 +278,8 @@ fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMod
             workerName = worker.name,
             balance = workerState.balance,
             onDismiss = { showPaymentDialog = false },
-            onConfirm = { amount, mode ->
-                viewModel.addPayment(worker.id, amount, mode)
+            onConfirm = { amount, mode, date ->
+                viewModel.addPayment(worker.id, amount, mode, date)
                 showPaymentDialog = false
             }
         )
@@ -344,11 +347,16 @@ fun PaymentDialog(
     workerName: String,
     balance: Double,
     onDismiss: () -> Unit,
-    onConfirm: (Double, String) -> Unit
+    onConfirm: (Double, String, Long) -> Unit
 ) {
     var amount by remember { mutableStateOf("") }
     var selectedMode by remember { mutableStateOf("Cash") }
+    var paymentDate by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val paymentModes = listOf("Cash", "UPI", "Scanner")
+    val context = LocalContext.current
+    val dateStr = remember(paymentDate) {
+        SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(Date(paymentDate))
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -372,6 +380,38 @@ fun PaymentDialog(
                     ) {
                         Text("Outstanding Balance", fontSize = 13.sp, color = TextGray)
                         Text("₹${balance.toInt()}", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = PrimaryOrange)
+                    }
+                }
+
+                // Date picker row
+                OutlinedCard(
+                    onClick = {
+                        val cal = Calendar.getInstance().apply { timeInMillis = paymentDate }
+                        DatePickerDialog(
+                            context,
+                            { _, y, m, d ->
+                                val newCal = Calendar.getInstance().apply { set(y, m, d) }
+                                paymentDate = newCal.timeInMillis
+                            },
+                            cal.get(Calendar.YEAR),
+                            cal.get(Calendar.MONTH),
+                            cal.get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = PrimaryOrange, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Payment Date", fontSize = 13.sp, color = TextGray)
+                        }
+                        Text(dateStr, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
                     }
                 }
 
@@ -403,8 +443,7 @@ fun PaymentDialog(
                                 .weight(1f)
                                 .clickable { selectedMode = mode },
                             shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) PrimaryOrange else BackgroundCream,
-                            tonalElevation = if (isSelected) 0.dp else 0.dp
+                            color = if (isSelected) PrimaryOrange else BackgroundCream
                         ) {
                             Column(
                                 modifier = Modifier.padding(vertical = 10.dp),
@@ -433,7 +472,7 @@ fun PaymentDialog(
             Button(
                 onClick = {
                     val amt = amount.toDoubleOrNull() ?: 0.0
-                    if (amt > 0) onConfirm(amt, selectedMode)
+                    if (amt > 0) onConfirm(amt, selectedMode, paymentDate)
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
                 shape = RoundedCornerShape(10.dp)
@@ -446,6 +485,143 @@ fun PaymentDialog(
         },
         shape = RoundedCornerShape(20.dp)
     )
+}
+
+@Composable
+fun WorkerDetailCard(workerState: WorkerState) {
+    val worker = workerState.worker
+    val initials = worker.name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
+    var expanded by remember { mutableStateOf(false) }
+
+    val sdf = SimpleDateFormat("dd MMM, yyyy", Locale.getDefault())
+
+    // Separate attendance records from payment records
+    val attendanceEntries = workerState.allEntries
+        .filter { it.paymentMode == null }
+        .sortedByDescending { it.date }
+    val paymentEntries = workerState.allEntries
+        .filter { it.paymentMode != null }
+        .sortedByDescending { it.date }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(elevation = 4.dp, shape = RoundedCornerShape(20.dp), spotColor = Color.LightGray.copy(alpha = 0.3f)),
+        colors = CardDefaults.cardColors(containerColor = SurfaceWhite),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header row
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(PrimaryOrange.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(initials, color = PrimaryOrange, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(worker.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = TextDark)
+                    Text(worker.role, fontSize = 11.sp, color = TextGray)
+                }
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = PrimaryOrange
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = BackgroundCream, thickness = 1.dp)
+            Spacer(Modifier.height(12.dp))
+
+            // Stats row
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                WorkerStat("Daily Wage", "₹${worker.dailyWage.toInt()}")
+                WorkerStat("Earned", "₹${workerState.totalEarned.toInt()}")
+                WorkerStat("Paid", "₹${workerState.totalPaid.toInt()}", AttendanceAbsent)
+                WorkerStat("Balance", "₹${workerState.balance.toInt()}", PrimaryOrange)
+            }
+
+            if (expanded) {
+                Spacer(Modifier.height(16.dp))
+
+                // Attendance History
+                if (attendanceEntries.isNotEmpty()) {
+                    Text("Attendance History", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextDark)
+                    Spacer(Modifier.height(8.dp))
+                    attendanceEntries.forEach { entry ->
+                        val (statusLabel, statusColor) = when (entry.attendance) {
+                            1.0 -> "Present" to AttendancePresent
+                            0.5 -> "Half Day" to AttendanceHalfDay
+                            else -> "Absent" to AttendanceAbsent
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = TextGray, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(sdf.format(Date(entry.date)), fontSize = 13.sp, color = TextDark)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(statusColor.copy(alpha = 0.15f))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(statusLabel, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = statusColor)
+                            }
+                        }
+                    }
+                } else {
+                    Text("No attendance records yet.", fontSize = 12.sp, color = TextGray)
+                }
+
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(color = BackgroundCream, thickness = 1.dp)
+                Spacer(Modifier.height(12.dp))
+
+                // Payment History
+                Text("Payment History", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextDark)
+                Spacer(Modifier.height(8.dp))
+                if (paymentEntries.isNotEmpty()) {
+                    paymentEntries.forEach { entry ->
+                        val modeIcon = when (entry.paymentMode) {
+                            "UPI" -> Icons.Default.PhoneAndroid
+                            "Scanner" -> Icons.Default.QrCodeScanner
+                            else -> Icons.Default.AttachMoney
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(modeIcon, contentDescription = null, tint = PrimaryOrange, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Column {
+                                    Text(sdf.format(Date(entry.date)), fontSize = 13.sp, color = TextDark)
+                                    Text(entry.paymentMode ?: "", fontSize = 11.sp, color = TextGray)
+                                }
+                            }
+                            Text("₹${entry.advance.toInt()}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AttendanceAbsent)
+                        }
+                    }
+                } else {
+                    Text("No payments recorded yet.", fontSize = 12.sp, color = TextGray)
+                }
+            }
+        }
+    }
 }
 
 @Composable
