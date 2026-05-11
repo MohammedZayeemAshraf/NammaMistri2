@@ -229,7 +229,16 @@ fun WallIllustration() {
 
 @Composable
 fun RoomIllustration() {
-    // Professional plan-view cross-section of a room with walls, floor tiles & dimension arrows
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(id = com.example.nammamistri2.R.drawable.room_diagram),
+        contentDescription = "Room diagram",
+        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+        modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp))
+    )
+}
+
+@Composable
+fun RoomIllustrationOld() {
     Canvas(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF0F4FF))) {
         drawIntoCanvas { canvas ->
             val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
@@ -310,7 +319,16 @@ fun RoomIllustration() {
 
 @Composable
 fun SlabIllustration() {
-    // Professional RCC slab cross-section: concrete body + cover zones + main bars + distribution bars + dimension callouts
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(id = com.example.nammamistri2.R.drawable.slab_diagram),
+        contentDescription = "Slab diagram",
+        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+        modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp))
+    )
+}
+
+@Composable
+fun SlabIllustrationOld() {
     Canvas(modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF4F4EE))) {
         drawIntoCanvas { canvas ->
             val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
@@ -396,7 +414,16 @@ fun SlabIllustration() {
 
 @Composable
 fun ColumnIllustration() {
-    // Professional RCC column cross-section: both elevation + plan views side by side
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(id = com.example.nammamistri2.R.drawable.column_diagram),
+        contentDescription = "Column diagram",
+        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+        modifier = Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(16.dp))
+    )
+}
+
+@Composable
+fun ColumnIllustrationOld() {
     Canvas(modifier = Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFF3E5F5))) {
         drawIntoCanvas { canvas ->
             val nc = canvas.nativeCanvas; val w = size.width; val h = size.height
