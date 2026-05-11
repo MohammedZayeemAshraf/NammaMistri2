@@ -33,7 +33,8 @@ enum class BrickType(
     val sizeLabel: String,            // display
     val lengthIn: Double, val widthIn: Double, val heightIn: Double,
     val emoji: String,
-    val mortarFraction: Double        // wet mortar vol fraction per m³ brickwork
+    val mortarFraction: Double,       // wet mortar vol fraction per m³ brickwork
+    val unitName: String              // display name for the unit (Bricks / Blocks)
 ) {
     RED_BRICK(
         label = "Red Brick",
@@ -41,7 +42,8 @@ enum class BrickType(
         sizeLabel = "9 × 4.5 × 3 inch",
         lengthIn = 9.0, widthIn = 4.5, heightIn = 3.0,
         emoji = "🧱",
-        mortarFraction = 0.25
+        mortarFraction = 0.25,
+        unitName = "Bricks"
     ),
     FLY_ASH_BRICK(
         label = "Fly Ash Brick",
@@ -49,7 +51,8 @@ enum class BrickType(
         sizeLabel = "9 × 4 × 3 inch",
         lengthIn = 9.0, widthIn = 4.0, heightIn = 3.0,
         emoji = "🪨",
-        mortarFraction = 0.22
+        mortarFraction = 0.22,
+        unitName = "Bricks"
     ),
     CONCRETE_BLOCK(
         label = "Concrete Block",
@@ -57,7 +60,8 @@ enum class BrickType(
         sizeLabel = "16 × 8 × 8 inch",
         lengthIn = 16.0, widthIn = 8.0, heightIn = 8.0,
         emoji = "◼",
-        mortarFraction = 0.12
+        mortarFraction = 0.12,
+        unitName = "Blocks"
     ),
     AAC_BLOCK(
         label = "AAC Block",
@@ -65,7 +69,8 @@ enum class BrickType(
         sizeLabel = "24 × 8 × 6 inch",
         lengthIn = 24.0, widthIn = 8.0, heightIn = 6.0,
         emoji = "🪶",
-        mortarFraction = 0.07
+        mortarFraction = 0.07,
+        unitName = "AAC Blocks"
     ),
     HOLLOW_BLOCK(
         label = "Hollow Block",
@@ -73,7 +78,8 @@ enum class BrickType(
         sizeLabel = "16 × 8 × 8 inch",
         lengthIn = 16.0, widthIn = 8.0, heightIn = 8.0,
         emoji = "⬜",
-        mortarFraction = 0.15
+        mortarFraction = 0.15,
+        unitName = "Blocks"
     );
 
     // units per m³ based on actual dimension + 10mm joint
