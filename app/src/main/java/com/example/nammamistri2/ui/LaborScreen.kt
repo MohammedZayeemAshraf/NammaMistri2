@@ -240,8 +240,27 @@ fun WorkerCard(workerState: WorkerState, viewModel: LaborViewModel, isPaymentMod
                         }
                     )
                 } else {
-                    IconButton(onClick = { /* Open Payment Dialog */ }) {
-                        Icon(Icons.Default.Payment, contentDescription = "Pay", tint = PrimaryOrange)
+                    var showPaymentDialog by remember { mutableStateOf(false) }
+                    Button(
+                        onClick = { showPaymentDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Payment, contentDescription = "Pay", modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Pay", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    if (showPaymentDialog) {
+                        PaymentDialog(
+                            workerName = worker.name,
+                            balance = workerState.balance,
+                            onDismiss = { showPaymentDialog = false },
+                            onConfirm = { amount, mode ->
+                                viewModel.addPayment(worker.id, amount, mode)
+                                showPaymentDialog = false
+                            }
+                        )
                     }
                 }
             }
@@ -314,6 +333,115 @@ fun ReportRow(label: String, value: String, valueColor: Color = TextDark, isBold
         Text(label, fontSize = 14.sp, color = TextGray)
         Text(value, fontSize = 15.sp, fontWeight = if (isBold) FontWeight.ExtraBold else FontWeight.Bold, color = valueColor)
     }
+}
+
+@Composable
+fun PaymentDialog(
+    workerName: String,
+    balance: Double,
+    onDismiss: () -> Unit,
+    onConfirm: (Double, String) -> Unit
+) {
+    var amount by remember { mutableStateOf("") }
+    var selectedMode by remember { mutableStateOf("Cash") }
+    val paymentModes = listOf("Cash", "UPI", "Scanner")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text("Add Payment", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextDark)
+                Text(workerName, fontSize = 13.sp, color = TextGray)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Balance info
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = PrimaryOrange.copy(alpha = 0.08f)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Outstanding Balance", fontSize = 13.sp, color = TextGray)
+                        Text("₹${balance.toInt()}", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = PrimaryOrange)
+                    }
+                }
+
+                // Amount field
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = { amount = it.filter { c -> c.isDigit() || c == '.' } },
+                    label = { Text("Amount (₹)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+
+                // Payment mode selection
+                Text("Payment Mode", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    paymentModes.forEach { mode ->
+                        val isSelected = selectedMode == mode
+                        val (icon, label) = when (mode) {
+                            "Cash" -> Icons.Default.AttachMoney to "Cash"
+                            "UPI" -> Icons.Default.PhoneAndroid to "UPI"
+                            else -> Icons.Default.QrCodeScanner to "Scanner"
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { selectedMode = mode },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) PrimaryOrange else BackgroundCream,
+                            tonalElevation = if (isSelected) 0.dp else 0.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    icon,
+                                    contentDescription = mode,
+                                    tint = if (isSelected) Color.White else TextGray,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    label,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) Color.White else TextGray
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val amt = amount.toDoubleOrNull() ?: 0.0
+                    if (amt > 0) onConfirm(amt, selectedMode)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Confirm Payment", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = TextGray) }
+        },
+        shape = RoundedCornerShape(20.dp)
+    )
 }
 
 @Composable
