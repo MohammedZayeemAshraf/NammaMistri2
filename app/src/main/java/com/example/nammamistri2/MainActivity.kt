@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
@@ -115,7 +117,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            NAMMAMISTRITheme {
+            var isDarkTheme by rememberSaveable { mutableStateOf(false) }
+            NAMMAMISTRITheme(darkTheme = isDarkTheme) {
                 when {
                     initError != null -> ErrorScreen(initError!!)
                     repository == null -> SplashScreen()
@@ -169,7 +172,9 @@ class MainActivity : ComponentActivity() {
                                 openDrawer = { scope.launch { drawerState.open() } },
                                 selectedSiteId = selectedSiteId,
                                 onSelectSite = { selectedSiteId = it },
-                                onBack = { currentScreen = "Home" }
+                                onBack = { currentScreen = "Home" },
+                                isDarkTheme = isDarkTheme,
+                                onToggleTheme = { isDarkTheme = !isDarkTheme }
                             )
                         }
                     }
@@ -249,7 +254,9 @@ fun MainScreen(
     openDrawer: () -> Unit,
     selectedSiteId: Long?,
     onSelectSite: (Long?) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    isDarkTheme: Boolean = false,
+    onToggleTheme: () -> Unit = {}
 ) {
     val sites by repository.getAllSites().collectAsState(initial = emptyList())
     val isHome = currentScreen == "Home"
@@ -265,7 +272,15 @@ fun MainScreen(
                         )
                     }
                 },
-                title = { Text(if (isHome) "Dashboard" else currentScreen) }
+                title = { Text(if (isHome) "Dashboard" else currentScreen) },
+                actions = {
+                    IconButton(onClick = onToggleTheme) {
+                        Icon(
+                            imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (isDarkTheme) "Switch to Light Mode" else "Switch to Dark Mode"
+                        )
+                    }
+                }
             )
         }
     ) { padding ->
