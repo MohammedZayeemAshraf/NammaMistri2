@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,33 +64,51 @@ fun CalculatorScreen(viewModel: CalculatorViewModel) {
     val tabs = listOf("Wall", "Room", "Slab", "Column")
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape    = RoundedCornerShape(14.dp)
+        // Modern Unit Selection
+        ModernFormCard(
+            title = "Measurement Unit",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Column(modifier = Modifier.padding(10.dp)) {
-                Text("Measurement Unit", fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(6.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf(LengthUnit.FEET, LengthUnit.METERS, LengthUnit.INCHES).forEach { u ->
-                        FilterChip(selected = selUnit == u, onClick = { selUnit = u },
-                            label = { Text(u.shortLabel, fontSize = 12.sp,
-                                fontWeight = if (selUnit == u) FontWeight.Bold else FontWeight.Normal) },
-                            modifier = Modifier.weight(1f))
-                    }
+            ModernPillToggle(
+                options = listOf(LengthUnit.FEET.shortLabel, LengthUnit.METERS.shortLabel, LengthUnit.INCHES.shortLabel),
+                selectedIndex = listOf(LengthUnit.FEET, LengthUnit.METERS, LengthUnit.INCHES).indexOf(selUnit),
+                onSelectionChanged = { index ->
+                    selUnit = listOf(LengthUnit.FEET, LengthUnit.METERS, LengthUnit.INCHES)[index]
+                }
+            )
+        }
+        
+        // Modern Material 3 Tabs
+        TabRow(
+            selectedTabIndex = selTab,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+            indicator = { tabPositions ->
+                if (selTab < tabPositions.size) {
+                    Box(
+                        Modifier
+                            .tabIndicatorOffset(tabPositions[selTab])
+                            .height(4.dp)
+                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+                    )
                 }
             }
-        }
-        TabRow(selectedTabIndex = selTab,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor   = MaterialTheme.colorScheme.primary) {
+        ) {
             tabs.forEachIndexed { i, t ->
-                Tab(selected = selTab == i, onClick = { selTab = i },
-                    text = { Text(t, fontWeight = if (selTab == i) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp) })
+                Tab(
+                    selected = selTab == i,
+                    onClick = { selTab = i },
+                    text = {
+                        Text(
+                            t,
+                            fontWeight = if (selTab == i) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 14.sp
+                        )
+                    }
+                )
             }
         }
+        
         when (selTab) {
             0 -> WallTab(viewModel, rates, selUnit)
             1 -> RoomTab(viewModel, rates, selUnit)

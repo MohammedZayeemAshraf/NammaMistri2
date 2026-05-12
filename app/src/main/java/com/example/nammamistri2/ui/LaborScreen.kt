@@ -147,17 +147,22 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
         },
         containerColor = BackgroundCream
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Column(modifier = Modifier.padding(padding).fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             
+            // Modern Tabs with custom indicator
             TabRow(
                 selectedTabIndex = selectedTab,
-                containerColor = BackgroundCream,
-                contentColor = PrimaryOrange,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
                 indicator = { tabPositions ->
-                    TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = PrimaryOrange
-                    )
+                    if (selectedTab < tabPositions.size) {
+                        Box(
+                            Modifier
+                                .tabIndicatorOffset(tabPositions[selectedTab])
+                                .height(4.dp)
+                                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+                        )
+                    }
                 },
                 divider = {}
             ) {
@@ -166,7 +171,11 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
                         text = { 
-                            Text(title, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium, fontSize = 14.sp) 
+                            Text(
+                                title,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
                         }
                     )
                 }
@@ -178,41 +187,153 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item {
-                    SummaryCard(teamSummary)
+                    ModernHeaderBanner(
+                        title = "Labor Diary",
+                        subtitle = "Manage your workforce and track daily records",
+                        backgroundColor = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                item {
+                    // Modern Stats Card Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ModernStatsCard(
+                            label = "Workers",
+                            value = teamSummary.totalWorkers.toString(),
+                            icon = Icons.Default.Person,
+                            backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                            modifier = Modifier.weight(1f)
+                        )
+                        ModernStatsCard(
+                            label = "Earned",
+                            value = "₹${teamSummary.totalEarnings.toInt()}",
+                            icon = Icons.Default.AttachMoney,
+                            backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ModernStatsCard(
+                            label = "Paid",
+                            value = "₹${teamSummary.totalPaid.toInt()}",
+                            icon = Icons.Default.AccountBalance,
+                            backgroundColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f),
+                            modifier = Modifier.weight(1f)
+                        )
+                        ModernStatsCard(
+                            label = "Balance",
+                            value = "₹${teamSummary.totalBalance.toInt()}",
+                            icon = Icons.Default.TrendingUp,
+                            backgroundColor = Color(0xFFFFC107).copy(alpha = 0.1f),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
                 when (selectedTab) {
                     0, 1 -> {
                         if (selectedTab == 0) {
                             item {
-                                AttendanceDateBanner(selectedDate) {
-                                    val calendar = Calendar.getInstance().apply { timeInMillis = selectedDate }
-                                    DatePickerDialog(
-                                        context,
-                                        { _, y, m, d ->
-                                            val newCal = Calendar.getInstance().apply { set(y, m, d) }
-                                            viewModel.selectDate(newCal.timeInMillis)
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val calendar = Calendar.getInstance().apply { timeInMillis = selectedDate }
+                                            DatePickerDialog(
+                                                context,
+                                                { _, y, m, d ->
+                                                    val newCal = Calendar.getInstance().apply { set(y, m, d) }
+                                                    viewModel.selectDate(newCal.timeInMillis)
+                                                },
+                                                calendar.get(Calendar.YEAR),
+                                                calendar.get(Calendar.MONTH),
+                                                calendar.get(Calendar.DAY_OF_MONTH)
+                                            ).show()
                                         },
-                                        calendar.get(Calendar.YEAR),
-                                        calendar.get(Calendar.MONTH),
-                                        calendar.get(Calendar.DAY_OF_MONTH)
-                                    ).show()
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column {
+                                            Text(
+                                                SimpleDateFormat("EEEE", Locale.getDefault()).format(Date(selectedDate)),
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                dateStr,
+                                                fontSize = 16.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
-                        items(sortedWorkerStates) { state ->
-                            WorkerCard(
-                                workerState = state,
-                                viewModel = viewModel,
-                                isPaymentMode = selectedTab == 1,
-                                selectedDate = selectedDate
-                            )
+                        if (sortedWorkerStates.isEmpty()) {
+                            item {
+                                ModernEmptyState(
+                                    icon = Icons.Default.Person,
+                                    title = "No Workers Added",
+                                    subtitle = "Add workers to track attendance and manage daily labor records",
+                                    actionLabel = "Add Worker",
+                                    onAction = { showAddWorkerDialog = true }
+                                )
+                            }
+                        } else {
+                            items(sortedWorkerStates) { state ->
+                                WorkerCard(
+                                    workerState = state,
+                                    viewModel = viewModel,
+                                    isPaymentMode = selectedTab == 1,
+                                    selectedDate = selectedDate
+                                )
+                            }
                         }
                     }
                     2 -> {
                         item { SummaryDetailSection(teamSummary) }
-                        items(sortedWorkerStates) { state ->
-                            WorkerDetailCard(state)
+                        if (sortedWorkerStates.isEmpty()) {
+                            item {
+                                ModernEmptyState(
+                                    icon = Icons.Default.Person,
+                                    title = "No Workers",
+                                    subtitle = "Add workers to see summary details"
+                                )
+                            }
+                        } else {
+                            items(sortedWorkerStates) { state ->
+                                WorkerDetailCard(state)
+                            }
                         }
                     }
                 }

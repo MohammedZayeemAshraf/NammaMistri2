@@ -263,6 +263,3 @@ fun AddRateDialog(onDismiss: () -> Unit, onAdd: (String, String, Double) -> Unit
         }
     )
 }
-
-
-}
