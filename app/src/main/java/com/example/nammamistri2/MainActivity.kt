@@ -43,7 +43,15 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
+import java.io.File
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -154,6 +162,8 @@ class MainActivity : ComponentActivity() {
                         val scope = rememberCoroutineScope()
                         var currentScreen by rememberSaveable { mutableStateOf("Home") }
                         var selectedSiteId by rememberSaveable { mutableStateOf<Long?>(null) }
+                        val ctx = LocalContext.current
+                        var profileData by remember { mutableStateOf(loadProfile(ctx)) }
 
                         ModalNavigationDrawer(
                             drawerState = drawerState,
@@ -162,8 +172,8 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxWidth(0.85f)
                                 ) {
                                     ModernDrawerHeader(
-                                        userName = "Mistri",
-                                        location = "Bangalore, India"
+                                        userName = if (profileData.name.isNotBlank()) profileData.name else "Mistri",
+                                        photoUri = profileData.photoUri
                                     )
                                     
                                     Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -174,7 +184,8 @@ class MainActivity : ComponentActivity() {
                                         DrawerItem("Calculator", Icons.Default.Calculate, "Calculator"),
                                         DrawerItem("Labor Diary", Icons.Default.Person, "Labor"),
                                         DrawerItem("Site Photos", Icons.Default.PhotoCamera, "Photos"),
-                                        DrawerItem("Standard Rates", Icons.Default.Assessment, "Rates")
+                                        DrawerItem("Standard Rates", Icons.Default.Assessment, "Rates"),
+                                        DrawerItem("My Profile", Icons.Default.AccountCircle, "Profile")
                                     )
                                     
                                     Column(
@@ -236,7 +247,9 @@ class MainActivity : ComponentActivity() {
                                 onSelectSite = { selectedSiteId = it },
                                 onBack = { currentScreen = "Home" },
                                 isDarkTheme = isDarkTheme,
-                                onToggleTheme = { isDarkTheme = !isDarkTheme }
+                                onToggleTheme = { isDarkTheme = !isDarkTheme },
+                                profileData = profileData,
+                                onProfileUpdated = { profileData = it }
                             )
                         }
                     }
@@ -260,13 +273,13 @@ fun SplashScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
         Image(
             painter = painterResource(id = R.drawable.openpage),
             contentDescription = "Opening page",
-            contentScale = ContentScale.Fit,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = imageAlpha }
@@ -299,7 +312,9 @@ fun MainScreen(
     onSelectSite: (Long?) -> Unit,
     onBack: () -> Unit,
     isDarkTheme: Boolean = false,
-    onToggleTheme: () -> Unit = {}
+    onToggleTheme: () -> Unit = {},
+    profileData: ProfileData = ProfileData(),
+    onProfileUpdated: (ProfileData) -> Unit = {}
 ) {
     val sites by repository.getAllSites().collectAsState(initial = emptyList())
     var selectedBottomNavItem by remember { mutableIntStateOf(0) }
@@ -308,11 +323,11 @@ fun MainScreen(
     val languages = listOf("English", "ಕನ್ನಡ", "हिन्दी")
 
     val bottomNavItems = listOf(
-        BottomNavItem("Dashboard", Icons.Default.Home, "Home"),
-        BottomNavItem("Sites", Icons.Default.LocationOn, "Photos"),
-        BottomNavItem("Calculate", Icons.Default.Calculate, "Calculator"),
-        BottomNavItem("Labor", Icons.Default.Person, "Labor"),
-        BottomNavItem("Rates", Icons.Default.Assessment, "Rates")
+        BottomNavItem(t("Dashboard", selectedLanguage), Icons.Default.Home, "Home"),
+        BottomNavItem(t("Sites", selectedLanguage), Icons.Default.LocationOn, "Photos"),
+        BottomNavItem(t("Calculate", selectedLanguage), Icons.Default.Calculate, "Calculator"),
+        BottomNavItem(t("Labor", selectedLanguage), Icons.Default.Person, "Labor"),
+        BottomNavItem(t("Rates", selectedLanguage), Icons.Default.Assessment, "Rates")
     )
 
     Scaffold(
@@ -329,12 +344,12 @@ fun MainScreen(
                 title = {
                     Text(
                         when (currentScreen) {
-                            "Home" -> "Dashboard"
-                            "Photos" -> "Sites"
-                            "Calculator" -> "Calculator"
-                            "Labor" -> "Labor Diary"
-                            "Rates" -> "Standard Rates"
-                            "Add Site" -> "Add New Site"
+                            "Home" -> t("Dashboard", selectedLanguage)
+                            "Photos" -> t("Sites", selectedLanguage)
+                            "Calculator" -> t("Calculator", selectedLanguage)
+                            "Labor" -> t("Labor Diary", selectedLanguage)
+                            "Rates" -> t("Standard Rates", selectedLanguage)
+                            "Add Site" -> t("Add New Site", selectedLanguage)
                             else -> currentScreen
                         },
                         fontWeight = FontWeight.Bold,
@@ -436,7 +451,8 @@ fun MainScreen(
                         onSelectSite(siteId)
                         onScreenSelected("Photos")
                         selectedBottomNavItem = 1
-                    }
+                    },
+                    selectedLanguage = selectedLanguage
                 )
                 "Add Site" -> AddSiteScreen(
                     repository = repository,
@@ -459,6 +475,10 @@ fun MainScreen(
                     }
                 )
                 "Rates" -> RatesScreen(viewModel(factory = RatesViewModelFactory(repository)))
+                "Profile" -> ProfileScreen(
+                    profileData = profileData,
+                    onSaved = { updated -> onProfileUpdated(updated) }
+                )
                 else -> HomeScreen(
                     sites = sites,
                     onQuickAccessSelected = { screen ->
@@ -475,7 +495,8 @@ fun MainScreen(
                         onSelectSite(siteId)
                         onScreenSelected("Photos")
                         selectedBottomNavItem = 1
-                    }
+                    },
+                    selectedLanguage = selectedLanguage
                 )
             }
         }
@@ -486,13 +507,14 @@ fun MainScreen(
 fun HomeScreen(
     sites: List<Site>,
     onQuickAccessSelected: (String) -> Unit,
-    onSiteSelected: (Long) -> Unit
+    onSiteSelected: (Long) -> Unit,
+    selectedLanguage: String = "English"
 ) {
     val homeActions = listOf(
-        QuickAccessItem("Calculator", Icons.Default.Calculate, "Calculator"),
-        QuickAccessItem("Labor Diary", Icons.Default.Person, "Labor"),
-        QuickAccessItem("Site Photos", Icons.Default.PhotoCamera, "Photos"),
-        QuickAccessItem("Standard Rates", Icons.Default.Assessment, "Rates")
+        QuickAccessItem(t("Calculator", selectedLanguage), Icons.Default.Calculate, "Calculator"),
+        QuickAccessItem(t("Labor Diary", selectedLanguage), Icons.Default.Person, "Labor"),
+        QuickAccessItem(t("Site Photos", selectedLanguage), Icons.Default.PhotoCamera, "Photos"),
+        QuickAccessItem(t("Standard Rates", selectedLanguage), Icons.Default.Assessment, "Rates")
     )
 
     LazyColumn(
@@ -524,7 +546,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Quick Access",
+                        t("Quick Access", selectedLanguage),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onBackground
@@ -562,7 +584,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Active Sites",
+                    t("Active Sites", selectedLanguage),
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onBackground
@@ -597,6 +619,72 @@ fun HomeScreen(
 data class QuickAccessItem(val title: String, val icon: ImageVector, val destination: String)
 
 data class DrawerItem(val title: String, val icon: ImageVector, val route: String)
+
+data class ProfileData(
+    val name: String = "",
+    val phone: String = "",
+    val role: String = "",
+    val photoUri: String? = null
+)
+
+private const val PREFS_PROFILE = "namma_mistri_profile"
+
+fun loadProfile(context: Context): ProfileData {
+    val p = context.getSharedPreferences(PREFS_PROFILE, Context.MODE_PRIVATE)
+    return ProfileData(
+        name = p.getString("name", "") ?: "",
+        phone = p.getString("phone", "") ?: "",
+        role = p.getString("role", "") ?: "",
+        photoUri = p.getString("photo_uri", null)
+    )
+}
+
+fun saveProfile(context: Context, profile: ProfileData) {
+    val editor = context.getSharedPreferences(PREFS_PROFILE, Context.MODE_PRIVATE).edit()
+    editor.putString("name", profile.name)
+    editor.putString("phone", profile.phone)
+    editor.putString("role", profile.role)
+    if (profile.photoUri != null) editor.putString("photo_uri", profile.photoUri)
+    else editor.remove("photo_uri")
+    editor.apply()
+}
+
+// ── Translations ──────────────────────────────────────────────────
+private val kannadaStrings = mapOf(
+    "Dashboard" to "ಮುಖಪುಟ",
+    "Sites" to "ತಾಣಗಳು",
+    "Calculate" to "ಲೆಕ್ಕ",
+    "Calculator" to "ಲೆಕ್ಕ",
+    "Labor" to "ಕೆಲಸ",
+    "Labor Diary" to "ಕಾರ್ಮಿಕ ದಾಖಲೆ",
+    "Rates" to "ದರ",
+    "Standard Rates" to "ದರ ಪಟ್ಟಿ",
+    "Add New Site" to "ಹೊಸ ತಾಣ",
+    "Quick Access" to "ತ್ವರಿತ ಪ್ರವೇಶ",
+    "Site Photos" to "ತಾಣ ಫೋಟೋ",
+    "Active Sites" to "ಸಕ್ರಿಯ ತಾಣಗಳು"
+)
+
+private val hindiStrings = mapOf(
+    "Dashboard" to "डैशबोर्ड",
+    "Sites" to "साइट्स",
+    "Calculate" to "कैलकुलेटर",
+    "Calculator" to "कैलकुलेटर",
+    "Labor" to "मजदूरी",
+    "Labor Diary" to "मजदूरी डायरी",
+    "Rates" to "दरें",
+    "Standard Rates" to "मानक दरें",
+    "Add New Site" to "नई साइट",
+    "Quick Access" to "त्वरित पहुँच",
+    "Site Photos" to "साइट फ़ोटो",
+    "Active Sites" to "सक्रिय साइट्स"
+)
+
+fun t(key: String, lang: String): String = when (lang) {
+    "ಕನ್ನಡ" -> kannadaStrings[key] ?: key
+    "हिन्दी" -> hindiStrings[key] ?: key
+    else -> key
+}
 
 @Composable
 fun AddSiteScreen(repository: NammaMistriRepository, onSaved: () -> Unit) {
@@ -749,6 +837,170 @@ fun AddSiteScreen(repository: NammaMistriRepository, onSaved: () -> Unit) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("Save Site", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
+    }
+}
+
+@Composable
+fun ProfileScreen(
+    profileData: ProfileData,
+    onSaved: (ProfileData) -> Unit
+) {
+    val context = LocalContext.current
+    var name by rememberSaveable { mutableStateOf(profileData.name) }
+    var phone by rememberSaveable { mutableStateOf(profileData.phone) }
+    var role by rememberSaveable { mutableStateOf(profileData.role) }
+    var photoUri by rememberSaveable { mutableStateOf(profileData.photoUri) }
+    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) pendingPhotoUri?.let { photoUri = it.toString() }
+        pendingPhotoUri = null
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> uri?.let { photoUri = it.toString() } }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val file = File(
+                context.getExternalFilesDir("Pictures") ?: context.filesDir,
+                "profile_${System.currentTimeMillis()}.jpg"
+            )
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            pendingPhotoUri = uri
+            cameraLauncher.launch(uri)
+        } else {
+            Toast.makeText(context, "Camera permission required", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            // Avatar section
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (photoUri != null) {
+                        AsyncImage(
+                            model = photoUri,
+                            contentDescription = "Profile photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(54.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Take Selfie", fontSize = 13.sp)
+                    }
+                    OutlinedButton(
+                        onClick = { galleryLauncher.launch("image/*") },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Gallery", fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+
+        item {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Full Name") },
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+        }
+
+        item {
+            OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it },
+                label = { Text("Phone Number") },
+                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+            )
+        }
+
+        item {
+            OutlinedTextField(
+                value = role,
+                onValueChange = { role = it },
+                label = { Text("Trade / Role (e.g. Mason, Carpenter)") },
+                leadingIcon = { Icon(Icons.Default.Work, contentDescription = null) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+        }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    val updated = ProfileData(
+                        name = name.trim(),
+                        phone = phone.trim(),
+                        role = role.trim(),
+                        photoUri = photoUri
+                    )
+                    saveProfile(context, updated)
+                    onSaved(updated)
+                    Toast.makeText(context, "Profile saved!", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B00))
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Save Profile", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
         }
     }
 }

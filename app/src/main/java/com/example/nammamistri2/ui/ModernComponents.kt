@@ -10,7 +10,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -467,9 +470,8 @@ fun ModernFormCard(
 // ─────────────────────────────────────────────────────────────────
 @Composable
 fun ModernDrawerHeader(
-    userName: String = "User",
-    location: String = "Location",
-    profileImageUrl: String? = null
+    userName: String = "Mistri",
+    photoUri: String? = null
 ) {
     Box(
         modifier = Modifier
@@ -489,34 +491,43 @@ fun ModernDrawerHeader(
                 .fillMaxSize()
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(60.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
-                        CircleShape
-                    ),
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                if (profileImageUrl == null) {
+                if (photoUri != null) {
+                    AsyncImage(
+                        model = photoUri,
+                        contentDescription = "Profile photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                } else {
                     Icon(
-                        imageVector = Icons.Default.Add,
+                        imageVector = Icons.Default.Person,
                         contentDescription = "Profile",
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(40.dp),
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
-            
+
+            Spacer(Modifier.height(10.dp))
+
             Text(
-                "NAMMA MISTRI",
-                fontSize = 20.sp,
+                if (userName.isNotBlank()) userName else "NAMMA MISTRI",
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
-            
+
             Text(
                 "Build Better Together",
                 fontSize = 12.sp,

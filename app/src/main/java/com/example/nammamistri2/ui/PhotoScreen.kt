@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -288,16 +289,16 @@ fun PhotoScreen(
                         label = "Total Photos",
                         value = photos.size.toString(),
                         icon = Icons.Default.PhotoCamera,
-                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                        iconTint = MaterialTheme.colorScheme.primary,
+                        backgroundColor = Color(0xFFFFF3E8),
+                        iconTint = Color(0xFFFF6B00),
                         modifier = Modifier.weight(1f)
                     )
                     ModernStatsCard(
                         label = "Progress",
                         value = "${selectedProgress.toInt()}%",
                         icon = Icons.Default.Assessment,
-                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                        iconTint = MaterialTheme.colorScheme.tertiary,
+                        backgroundColor = Color(0xFFE8F5E9),
+                        iconTint = Color(0xFF2E7D32),
                         progressFraction = selectedProgress / 100f,
                         modifier = Modifier.weight(1f)
                     )

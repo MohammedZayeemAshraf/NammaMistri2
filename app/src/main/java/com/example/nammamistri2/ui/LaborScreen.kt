@@ -204,16 +204,16 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
                                 label = "Workers",
                                 value = teamSummary.totalWorkers.toString(),
                                 icon = Icons.Default.Person,
-                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                                iconTint = MaterialTheme.colorScheme.primary,
+                                backgroundColor = Color(0xFFFFF3E8),
+                                iconTint = Color(0xFFFF6B00),
                                 modifier = Modifier.weight(1f)
                             )
                             ModernStatsCard(
                                 label = "Earned",
                                 value = "₹${teamSummary.totalEarnings.toInt()}",
                                 icon = Icons.Default.AttachMoney,
-                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                                iconTint = MaterialTheme.colorScheme.tertiary,
+                                backgroundColor = Color(0xFFE8F5E9),
+                                iconTint = Color(0xFF2E7D32),
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -225,7 +225,7 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
                                 label = "Paid",
                                 value = "₹${teamSummary.totalPaid.toInt()}",
                                 icon = Icons.Default.AccountBalance,
-                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                backgroundColor = Color(0xFFE3F2FD),
                                 iconTint = Color(0xFF1565C0),
                                 modifier = Modifier.weight(1f)
                             )
@@ -233,8 +233,8 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
                                 label = "Balance",
                                 value = "₹${teamSummary.totalBalance.toInt()}",
                                 icon = Icons.Default.TrendingUp,
-                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                                iconTint = MaterialTheme.colorScheme.secondary,
+                                backgroundColor = Color(0xFFFFF8E1),
+                                iconTint = Color(0xFFF57F17),
                                 modifier = Modifier.weight(1f)
                             )
                         }
