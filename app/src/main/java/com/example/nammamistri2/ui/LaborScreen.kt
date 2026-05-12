@@ -195,51 +195,49 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
                 }
 
                 item {
-                    // Modern Stats Card Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        ModernStatsCard(
-                            label = "Workers",
-                            value = teamSummary.totalWorkers.toString(),
-                            icon = Icons.Default.Person,
-                            backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            modifier = Modifier.weight(1f)
-                        )
-                        ModernStatsCard(
-                            label = "Earned",
-                            value = "₹${teamSummary.totalEarnings.toInt()}",
-                            icon = Icons.Default.AttachMoney,
-                            backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        ModernStatsCard(
-                            label = "Paid",
-                            value = "₹${teamSummary.totalPaid.toInt()}",
-                            icon = Icons.Default.AccountBalance,
-                            backgroundColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f),
-                            modifier = Modifier.weight(1f)
-                        )
-                        ModernStatsCard(
-                            label = "Balance",
-                            value = "₹${teamSummary.totalBalance.toInt()}",
-                            icon = Icons.Default.TrendingUp,
-                            backgroundColor = Color(0xFFFFC107).copy(alpha = 0.1f),
-                            modifier = Modifier.weight(1f)
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            ModernStatsCard(
+                                label = "Workers",
+                                value = teamSummary.totalWorkers.toString(),
+                                icon = Icons.Default.Person,
+                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                iconTint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            ModernStatsCard(
+                                label = "Earned",
+                                value = "₹${teamSummary.totalEarnings.toInt()}",
+                                icon = Icons.Default.AttachMoney,
+                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                iconTint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            ModernStatsCard(
+                                label = "Paid",
+                                value = "₹${teamSummary.totalPaid.toInt()}",
+                                icon = Icons.Default.AccountBalance,
+                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                iconTint = Color(0xFF1565C0),
+                                modifier = Modifier.weight(1f)
+                            )
+                            ModernStatsCard(
+                                label = "Balance",
+                                value = "₹${teamSummary.totalBalance.toInt()}",
+                                icon = Icons.Default.TrendingUp,
+                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                iconTint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
 

@@ -288,14 +288,17 @@ fun PhotoScreen(
                         label = "Total Photos",
                         value = photos.size.toString(),
                         icon = Icons.Default.PhotoCamera,
-                        backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                        iconTint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
                     ModernStatsCard(
                         label = "Progress",
                         value = "${selectedProgress.toInt()}%",
                         icon = Icons.Default.Assessment,
-                        backgroundColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f),
+                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                        iconTint = MaterialTheme.colorScheme.tertiary,
+                        progressFraction = selectedProgress / 100f,
                         modifier = Modifier.weight(1f)
                     )
                 }
