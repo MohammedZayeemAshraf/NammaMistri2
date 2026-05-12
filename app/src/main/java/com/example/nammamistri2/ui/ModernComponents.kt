@@ -10,7 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.ripple.ripple
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -88,25 +88,26 @@ fun ModernQuickAccessCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val cardOrange = Color(0xFFFF6B00)
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .height(100.dp)
             .clickable(
                 interactionSource = MutableInteractionSource(),
                 indication = ripple(bounded = true)
             ) { onClick() }
-            .shadow(4.dp, RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
+            .shadow(4.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = Color(0xFFFFF3E8)
         )
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(12.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
@@ -116,9 +117,9 @@ fun ModernQuickAccessCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(50.dp)
+                            .size(40.dp)
                             .background(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                cardOrange.copy(alpha = 0.15f),
                                 CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -126,31 +127,29 @@ fun ModernQuickAccessCard(
                         Icon(
                             imageVector = icon,
                             contentDescription = title,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
+                            tint = cardOrange,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                     Icon(
-                        imageVector = Icons.Default.Add,
+                        imageVector = Icons.Default.ArrowForward,
                         contentDescription = "Arrow",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .graphicsLayer(rotationZ = 45f)
+                        tint = cardOrange,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 Column {
                     Text(
                         title,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        fontSize = 13.sp,
+                        color = Color(0xFF1A1A1A)
                     )
                     if (description.isNotEmpty()) {
                         Text(
                             description,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            fontSize = 11.sp,
+                            color = Color(0xFF757575)
                         )
                     }
                 }

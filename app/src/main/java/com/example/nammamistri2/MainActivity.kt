@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
             var initError by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(Unit) {
+                val splashStart = System.currentTimeMillis()
                 try {
                     Log.d(TAG, "LaunchedEffect: Starting database initialization")
                     database = withContext(Dispatchers.IO) {
@@ -114,10 +115,16 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    // Enforce minimum 4-second splash screen
+                    val elapsed = System.currentTimeMillis() - splashStart
+                    if (elapsed < 4000L) delay(4000L - elapsed)
+
                     repository = repo
                 } catch (e: Throwable) {
                     Log.e(TAG, "LaunchedEffect: Error during database initialization", e)
                     e.printStackTrace()
+                    val elapsed = System.currentTimeMillis() - splashStart
+                    if (elapsed < 4000L) delay(4000L - elapsed)
                     initError = e.message ?: "Unknown initialization error: ${e::class.java.simpleName}"
                 }
             }
@@ -226,17 +233,14 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SplashScreen() {
-    var startAnimation by remember { mutableStateOf(false) }
-    val imageAlpha by animateFloatAsState(
-        targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 700),
+    var visible by remember { mutableStateOf(false) }
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 600),
         label = "splashAlpha"
     )
 
-    LaunchedEffect(Unit) {
-        startAnimation = true
-        delay(4000)
-    }
+    LaunchedEffect(Unit) { visible = true }
 
     Box(
         modifier = Modifier
@@ -250,7 +254,7 @@ fun SplashScreen() {
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { alpha = imageAlpha }
+                .graphicsLayer { this.alpha = alpha }
         )
     }
 }
