@@ -227,42 +227,43 @@ fun ModernHeaderBanner(
     title: String,
     subtitle: String,
     backgroundColor: Color = MaterialTheme.colorScheme.primary,
+    compact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(140.dp),
-        shape = RoundedCornerShape(20.dp),
+            .height(if (compact) 64.dp else 140.dp),
+        shape = RoundedCornerShape(if (compact) 14.dp else 20.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (compact) 2.dp else 4.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
                         colors = listOf(
                             backgroundColor,
-                            backgroundColor.copy(alpha = 0.8f)
+                            backgroundColor.copy(alpha = 0.85f)
                         )
                     )
                 ),
             contentAlignment = Alignment.CenterStart
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.padding(horizontal = if (compact) 16.dp else 24.dp, vertical = if (compact) 10.dp else 24.dp),
+                verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 8.dp)
             ) {
                 Text(
                     title,
-                    fontSize = 24.sp,
+                    fontSize = if (compact) 15.sp else 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
                     subtitle,
-                    fontSize = 14.sp,
+                    fontSize = if (compact) 11.sp else 14.sp,
                     color = Color.White.copy(alpha = 0.85f)
                 )
             }

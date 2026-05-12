@@ -130,7 +130,8 @@ fun PhotoScreen(
                 ModernHeaderBanner(
                     title = "Track Site Progress",
                     subtitle = "Capture and organize your construction updates",
-                    backgroundColor = MaterialTheme.colorScheme.primary
+                    backgroundColor = MaterialTheme.colorScheme.primary,
+                    compact = true
                 )
             }
 

@@ -61,75 +61,6 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
     val dateStr = SimpleDateFormat("dd MMM, yyyy", Locale.getDefault()).format(Date(selectedDate))
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { 
-                    Column {
-                        Text("Labor Diary", fontWeight = FontWeight.Bold, color = TextDark, fontSize = 20.sp)
-                        Text(dateStr, fontSize = 12.sp, color = TextGray)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextDark)
-                    }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { showSortMenu = true }) {
-                            Icon(Icons.Default.FilterList, contentDescription = "Sort", tint = PrimaryOrange)
-                        }
-                        DropdownMenu(
-                            expanded = showSortMenu,
-                            onDismissRequest = { showSortMenu = false }
-                        ) {
-                            Text(
-                                "Sort Workers By",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
-                                color = TextGray,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
-                            sortOptions.forEach { option ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            if (sortOption == option) {
-                                                Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryOrange, modifier = Modifier.size(16.dp))
-                                                Spacer(Modifier.width(8.dp))
-                                            } else {
-                                                Spacer(Modifier.width(24.dp))
-                                            }
-                                            Text(option, fontSize = 14.sp)
-                                        }
-                                    },
-                                    onClick = {
-                                        sortOption = option
-                                        showSortMenu = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    IconButton(onClick = {
-                        val calendar = Calendar.getInstance().apply { timeInMillis = selectedDate }
-                        DatePickerDialog(
-                            context,
-                            { _, y, m, d ->
-                                val newCal = Calendar.getInstance().apply { set(y, m, d) }
-                                viewModel.selectDate(newCal.timeInMillis)
-                            },
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH),
-                            calendar.get(Calendar.DAY_OF_MONTH)
-                        ).show()
-                    }) {
-                        Icon(Icons.Default.CalendarToday, contentDescription = "Calendar", tint = PrimaryOrange)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BackgroundCream)
-            )
-        },
         floatingActionButton = {
             Button(
                 onClick = { showAddWorkerDialog = true },
@@ -148,8 +79,77 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
         containerColor = BackgroundCream
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-            
-            // Modern Tabs with custom indicator
+
+            // Sort + calendar toolbar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Sort
+                Box(modifier = Modifier.weight(1f)) {
+                    TextButton(onClick = { showSortMenu = true }) {
+                        Icon(Icons.Default.FilterList, contentDescription = "Sort", tint = PrimaryOrange, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(sortOption, fontSize = 12.sp, color = PrimaryOrange, fontWeight = FontWeight.SemiBold)
+                    }
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false }
+                    ) {
+                        Text(
+                            "Sort Workers By",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = TextGray,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                        sortOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (sortOption == option) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryOrange, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                        } else {
+                                            Spacer(Modifier.width(24.dp))
+                                        }
+                                        Text(option, fontSize = 14.sp)
+                                    }
+                                },
+                                onClick = {
+                                    sortOption = option
+                                    showSortMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+                // Date chip
+                TextButton(
+                    onClick = {
+                        val calendar = Calendar.getInstance().apply { timeInMillis = selectedDate }
+                        DatePickerDialog(
+                            context,
+                            { _, y, m, d ->
+                                val newCal = Calendar.getInstance().apply { set(y, m, d) }
+                                viewModel.selectDate(newCal.timeInMillis)
+                            },
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    }
+                ) {
+                    Icon(Icons.Default.CalendarToday, contentDescription = null, tint = PrimaryOrange, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(dateStr, fontSize = 12.sp, color = PrimaryOrange, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            // Tabs
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -186,14 +186,6 @@ fun LaborScreen(viewModel: LaborViewModel = viewModel(), onBack: () -> Unit = {}
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item {
-                    ModernHeaderBanner(
-                        title = "Labor Diary",
-                        subtitle = "Manage your workforce and track daily records",
-                        backgroundColor = MaterialTheme.colorScheme.primary
-                    )
-                }
-
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(
