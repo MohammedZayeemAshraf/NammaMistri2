@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.LightMode
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
@@ -47,6 +49,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -300,7 +303,10 @@ fun MainScreen(
 ) {
     val sites by repository.getAllSites().collectAsState(initial = emptyList())
     var selectedBottomNavItem by remember { mutableIntStateOf(0) }
-    
+    var selectedLanguage by rememberSaveable { mutableStateOf("English") }
+    var showLanguageMenu by remember { mutableStateOf(false) }
+    val languages = listOf("English", "ಕನ್ನಡ", "हिन्दी")
+
     val bottomNavItems = listOf(
         BottomNavItem("Dashboard", Icons.Default.Home, "Home"),
         BottomNavItem("Sites", Icons.Default.LocationOn, "Photos"),
@@ -320,43 +326,75 @@ fun MainScreen(
                         )
                     }
                 },
-                title = { 
-                    if (currentScreen == "Home") {
-                        Column {
-                            Text("Dashboard", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Text("Bangalore, India", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    } else {
-                        Text(currentScreen)
-                    }
+                title = {
+                    Text(
+                        when (currentScreen) {
+                            "Home" -> "Dashboard"
+                            "Photos" -> "Sites"
+                            "Calculator" -> "Calculator"
+                            "Labor" -> "Labor Diary"
+                            "Rates" -> "Standard Rates"
+                            "Add Site" -> "Add New Site"
+                            else -> currentScreen
+                        },
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
                 },
                 actions = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications"
-                        )
-                    }
+                    // Theme toggle
                     IconButton(onClick = onToggleTheme) {
                         Icon(
                             imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                             contentDescription = if (isDarkTheme) "Switch to Light Mode" else "Switch to Dark Mode"
                         )
                     }
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profile",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    // Language picker
+                    Box {
+                        IconButton(onClick = { showLanguageMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = "Language"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showLanguageMenu,
+                            onDismissRequest = { showLanguageMenu = false }
+                        ) {
+                            Text(
+                                "Select Language",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                            languages.forEach { lang ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            if (selectedLanguage == lang) {
+                                                Icon(
+                                                    Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(Modifier.width(8.dp))
+                                            } else {
+                                                Spacer(Modifier.width(24.dp))
+                                            }
+                                            Text(lang)
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedLanguage = lang
+                                        showLanguageMenu = false
+                                    }
+                                )
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                 }
             )
         },
@@ -464,38 +502,6 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(vertical = 16.dp, horizontal = 16.dp)
     ) {
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Namaskara, Mistri!",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    "ನಿರ್ಮಾಣ ಕಾರ್ಯ ಕೆಲಸವನ್ನು ಸುಗಮವಾಗಿ ನಡೆಸಿ",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Location",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        "Bangalore, Karnataka",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
         item {
             Image(
                 painter = painterResource(id = R.drawable.banner),

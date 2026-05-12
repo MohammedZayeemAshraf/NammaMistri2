@@ -150,55 +150,67 @@ fun ModernStatsCard(
     value: String,
     icon: ImageVector? = null,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
+    progressFraction: Float? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .height(100.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     label,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.3.sp
                 )
-                Text(
-                    value,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            if (icon != null) {
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = label,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
+                if (icon != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .background(iconTint.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = label,
+                            tint = iconTint,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
                 }
+            }
+            Text(
+                value,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+            if (progressFraction != null) {
+                LinearProgressIndicator(
+                    progress = { progressFraction.coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                    color = iconTint,
+                    trackColor = iconTint.copy(alpha = 0.15f)
+                )
             }
         }
     }
