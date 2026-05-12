@@ -1,12 +1,20 @@
 package com.example.nammamistri2
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.location.Geocoder
+import android.location.LocationManager
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -27,8 +35,11 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -57,6 +68,7 @@ import com.example.nammamistri2.repository.NammaMistriRepository
 import com.example.nammamistri2.ui.*
 import com.example.nammamistri2.ui.theme.NAMMAMISTRITheme
 import com.example.nammamistri2.viewmodel.*
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -390,7 +402,10 @@ fun MainScreen(
                 )
                 "Add Site" -> AddSiteScreen(
                     repository = repository,
-                    onSaved = { onScreenSelected("Home") }
+                    onSaved = {
+                        onScreenSelected("Photos")
+                        selectedBottomNavItem = 1
+                    }
                 )
                 "Calculator" -> CalculatorScreen(viewModel(factory = CalculatorViewModelFactory(repository)))
                 "Labor" -> LaborScreen(viewModel = viewModel(factory = LaborViewModelFactory(repository)), onBack = {
@@ -400,7 +415,10 @@ fun MainScreen(
                 "Photos" -> PhotoScreen(
                     repository = repository,
                     selectedSiteId = selectedSiteId,
-                    onSelectSite = onSelectSite
+                    onSelectSite = onSelectSite,
+                    onNavigateToAddSite = {
+                        onScreenSelected("Add Site")
+                    }
                 )
                 "Rates" -> RatesScreen(viewModel(factory = RatesViewModelFactory(repository)))
                 else -> HomeScreen(
@@ -580,6 +598,45 @@ fun AddSiteScreen(repository: NammaMistriRepository, onSaved: () -> Unit) {
     var siteName by rememberSaveable { mutableStateOf("") }
     var siteLocation by rememberSaveable { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    var isLocating by remember { mutableStateOf(false) }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                      permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (granted) {
+            isLocating = true
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                    @Suppress("MissingPermission")
+                    val location = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                        ?: lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    if (location != null) {
+                        val geocoder = Geocoder(context, Locale.getDefault())
+                        @Suppress("DEPRECATION")
+                        val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+                        val addressLine = addresses?.firstOrNull()?.getAddressLine(0)
+                            ?: "%.5f, %.5f".format(location.latitude, location.longitude)
+                        withContext(Dispatchers.Main) { siteLocation = addressLine }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Could not detect location. Please enter manually.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Location error. Please enter manually.", Toast.LENGTH_SHORT).show()
+                    }
+                } finally {
+                    withContext(Dispatchers.Main) { isLocating = false }
+                }
+            }
+        } else {
+            Toast.makeText(context, "Location permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -587,34 +644,105 @@ fun AddSiteScreen(repository: NammaMistriRepository, onSaved: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Add Site", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+        Text("Add New Site", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+
         OutlinedTextField(
             value = siteName,
             onValueChange = { siteName = it },
-            label = { Text("Site name") },
-            modifier = Modifier.fillMaxWidth()
+            label = { Text("Site Name") },
+            leadingIcon = { Icon(Icons.Default.Construction, contentDescription = null) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
         )
+
         OutlinedTextField(
             value = siteLocation,
             onValueChange = { siteLocation = it },
-            label = { Text("Location") },
-            modifier = Modifier.fillMaxWidth()
+            label = { Text("Location / Address") },
+            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null) },
+            trailingIcon = {
+                if (isLocating) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            minLines = 2
         )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    locationPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                enabled = !isLocating
+            ) {
+                Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (isLocating) "Detecting..." else "Use My Location",
+                    fontSize = 12.sp
+                )
+            }
+            OutlinedButton(
+                onClick = {
+                    val query = Uri.encode(siteLocation.ifBlank { "construction site" })
+                    val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$query"))
+                        .apply { setPackage("com.google.android.apps.maps") }
+                    if (mapIntent.resolveActivity(context.packageManager) != null) {
+                        context.startActivity(mapIntent)
+                    } else {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://maps.google.com/?q=$query"))
+                        )
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("View on Map", fontSize = 12.sp)
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+
         Button(
             onClick = {
-                if (siteName.isBlank() || siteLocation.isBlank()) {
-                    Toast.makeText(context, "Enter name and location", Toast.LENGTH_SHORT).show()
+                if (siteName.isBlank()) {
+                    Toast.makeText(context, "Please enter a site name", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                if (siteLocation.isBlank()) {
+                    Toast.makeText(context, "Please enter a location", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
                 scope.launch {
                     repository.insertSite(Site(name = siteName.trim(), location = siteLocation.trim()))
+                    Toast.makeText(context, "Site \"${siteName.trim()}\" added!", Toast.LENGTH_SHORT).show()
                     onSaved()
-                    Toast.makeText(context, "Site added", Toast.LENGTH_SHORT).show()
                 }
             },
-            modifier = Modifier.align(Alignment.End)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B00))
         ) {
-            Text("Save Site")
+            Icon(Icons.Default.Add, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Save Site", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }

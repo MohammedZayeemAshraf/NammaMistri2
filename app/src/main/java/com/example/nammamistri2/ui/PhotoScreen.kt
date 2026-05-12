@@ -40,7 +40,8 @@ import java.io.File
 fun PhotoScreen(
     repository: NammaMistriRepository,
     selectedSiteId: Long?,
-    onSelectSite: (Long?) -> Unit
+    onSelectSite: (Long?) -> Unit,
+    onNavigateToAddSite: () -> Unit = {}
 ) {
     val sites by repository.getAllSites().collectAsState(initial = emptyList())
     val context = LocalContext.current
@@ -140,7 +141,7 @@ fun PhotoScreen(
                             title = "No Sites Available",
                             subtitle = "Create a site first to track photos",
                             actionLabel = "Add Site",
-                            onAction = { }
+                            onAction = onNavigateToAddSite
                         )
                     }
                 } else {
