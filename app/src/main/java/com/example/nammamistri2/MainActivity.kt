@@ -115,16 +115,16 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Enforce minimum 4-second splash screen
+                    // Enforce minimum 5-second splash screen
                     val elapsed = System.currentTimeMillis() - splashStart
-                    if (elapsed < 4000L) delay(4000L - elapsed)
+                    if (elapsed < 5000L) delay(5000L - elapsed)
 
                     repository = repo
                 } catch (e: Throwable) {
                     Log.e(TAG, "LaunchedEffect: Error during database initialization", e)
                     e.printStackTrace()
                     val elapsed = System.currentTimeMillis() - splashStart
-                    if (elapsed < 4000L) delay(4000L - elapsed)
+                    if (elapsed < 5000L) delay(5000L - elapsed)
                     initError = e.message ?: "Unknown initialization error: ${e::class.java.simpleName}"
                 }
             }
@@ -234,9 +234,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SplashScreen() {
     var visible by remember { mutableStateOf(false) }
-    val alpha by animateFloatAsState(
+    val imageAlpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = 600),
+        animationSpec = tween(durationMillis = 800),
         label = "splashAlpha"
     )
 
@@ -254,7 +254,7 @@ fun SplashScreen() {
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { this.alpha = alpha }
+                .graphicsLayer { alpha = imageAlpha }
         )
     }
 }
@@ -555,7 +555,7 @@ fun HomeScreen(
         if (sites.isEmpty()) {
             item {
                 ModernEmptyState(
-                    icon = Icons.Default.LocationOn,
+                    icon = Icons.Default.Construction,
                     title = "No Active Sites",
                     subtitle = "Create your first site to start tracking construction progress",
                     actionLabel = "+ Add Site",

@@ -10,7 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -92,67 +92,50 @@ fun ModernQuickAccessCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(100.dp)
-            .clickable(
-                interactionSource = MutableInteractionSource(),
-                indication = ripple(bounded = true)
-            ) { onClick() }
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFF3E8)
-        )
+            .height(88.dp)
+            .shadow(3.dp, RoundedCornerShape(14.dp)),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E8)),
+        onClick = onClick
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(
+            // Arrow in top-right corner
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = cardOrange.copy(alpha = 0.5f),
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .size(14.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 8.dp)
+            )
+            // Icon + title centered
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(cardOrange.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                cardOrange.copy(alpha = 0.15f),
-                                CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = title,
-                            tint = cardOrange,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
                     Icon(
-                        imageVector = Icons.Default.ArrowForward,
-                        contentDescription = "Arrow",
+                        imageVector = icon,
+                        contentDescription = title,
                         tint = cardOrange,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-                Column {
-                    Text(
-                        title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = Color(0xFF1A1A1A)
-                    )
-                    if (description.isNotEmpty()) {
-                        Text(
-                            description,
-                            fontSize = 11.sp,
-                            color = Color(0xFF757575)
-                        )
-                    }
-                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = Color(0xFF1A1A1A),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
