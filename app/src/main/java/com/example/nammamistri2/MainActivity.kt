@@ -227,47 +227,31 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SplashScreen() {
     var startAnimation by remember { mutableStateOf(false) }
-    val logoScale by animateFloatAsState(
-        targetValue = if (startAnimation) 1f else 0.7f,
-        animationSpec = tween(durationMillis = 900)
-    )
-    val logoAlpha by animateFloatAsState(
-        targetValue = if (startAnimation) 1f else 0.3f,
-        animationSpec = tween(durationMillis = 900)
+    val imageAlpha by animateFloatAsState(
+        targetValue = if (startAnimation) 1f else 0f,
+        animationSpec = tween(durationMillis = 700),
+        label = "splashAlpha"
     )
 
     LaunchedEffect(Unit) {
         startAnimation = true
-        delay(3000)
+        delay(4000)
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(24.dp)
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.splash_logo),
-                contentDescription = "App logo",
-                modifier = Modifier
-                    .size(180.dp)
-                    .graphicsLayer {
-                        scaleX = logoScale
-                        scaleY = logoScale
-                        alpha = logoAlpha
-                    }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "NAMMAMISTRI",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+        Image(
+            painter = painterResource(id = R.drawable.openpage),
+            contentDescription = "Opening page",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = imageAlpha }
+        )
     }
 }
 
@@ -490,13 +474,17 @@ fun HomeScreen(
                 }
             }
         }
-        {
-        ModernHeaderBanner(
-            title = "Let's Build!",
-            subtitle = "Track your construction progress and manage your workforce effectively",
-            backgroundColor = MaterialTheme.colorScheme.primary
-        )
-    }
+        item {
+            Image(
+                painter = painterResource(id = R.drawable.banner),
+                contentDescription = "Construction banner",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(20.dp))
+            )
+        }
 
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
