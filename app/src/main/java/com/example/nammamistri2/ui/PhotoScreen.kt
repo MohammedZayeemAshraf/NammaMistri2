@@ -9,16 +9,26 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.nammamistri2.repository.NammaMistriRepository
@@ -38,6 +48,7 @@ fun PhotoScreen(
     var currentSiteId by rememberSaveable { mutableStateOf(selectedSiteId) }
     var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var selectedProgress by rememberSaveable { mutableStateOf(0f) }
+    var selectedFilter by rememberSaveable { mutableStateOf("All") }
 
     LaunchedEffect(selectedSiteId) {
         if (selectedSiteId != null) {
@@ -95,11 +106,13 @@ fun PhotoScreen(
     Scaffold(
         floatingActionButton = {
             if (currentSite != null) {
-                FloatingActionButton(onClick = {
-                    permissionLauncher.launch(Manifest.permission.CAMERA)
-                }) {
-                    Text("+")
-                }
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    },
+                    icon = { Icon(Icons.Default.PhotoCamera, contentDescription = "Add Photo") },
+                    text = { Text("Add Photos") }
+                )
             }
         }
     ) { padding ->
@@ -107,83 +120,223 @@ fun PhotoScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .background(MaterialTheme.colorScheme.background),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp, horizontal = 16.dp)
         ) {
             item {
-                Text("Site Photos", style = MaterialTheme.typography.headlineMedium)
+                ModernHeaderBanner(
+                    title = "Track Site Progress",
+                    subtitle = "Capture and organize your construction updates",
+                    backgroundColor = MaterialTheme.colorScheme.primary
+                )
             }
 
             if (currentSite == null) {
                 if (sites.isEmpty()) {
                     item {
-                        Text("No sites available. Please add a site first.", style = MaterialTheme.typography.bodyLarge)
+                        ModernEmptyState(
+                            icon = Icons.Default.LocationOn,
+                            title = "No Sites Available",
+                            subtitle = "Create a site first to track photos",
+                            actionLabel = "Add Site",
+                            onAction = { }
+                        )
                     }
                 } else {
                     item {
-                        Text("Select a site to view photos", style = MaterialTheme.typography.bodyLarge)
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "Select a Site",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
                     }
                     items(sites) { site ->
-                        Button(
-                            onClick = {
-                                currentSiteId = site.id
-                                onSelectSite(site.id)
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    currentSiteId = site.id
+                                    onSelectSite(site.id)
+                                },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
-                            Text(site.name)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        site.name,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        site.location,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Select",
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .graphicsLayer(rotationZ = 180f),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
                 return@LazyColumn
             }
 
+            // Site Header
             item {
-                Text("Site: ${currentSite.name}", style = MaterialTheme.typography.headlineSmall)
-                Text(currentSite.location, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(12.dp))
-                Text("Progress: ${selectedProgress.toInt()}%", style = MaterialTheme.typography.bodyMedium)
-                Slider(
-                    value = selectedProgress,
-                    onValueChange = { selectedProgress = it },
-                    valueRange = 0f..100f,
-                    steps = 4
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = {
-                    scope.launch {
-                        repository.updateSite(currentSite.copy(progress = selectedProgress.toInt()))
-                        Toast.makeText(context, "Progress updated", Toast.LENGTH_SHORT).show()
-                    }
-                }) {
-                    Text("Update progress")
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
-                    Text("Photos for ${currentSite.name}", style = MaterialTheme.typography.headlineSmall)
-                    TextButton(onClick = {
-                        currentSiteId = null
-                        onSelectSite(null)
-                    }) {
-                        Text("Change site")
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    currentSite.name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    currentSite.location,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    currentSiteId = null
+                                    onSelectSite(null)
+                                },
+                                modifier = Modifier.height(36.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Change", fontSize = 12.sp)
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Text(
+                            "Progress: ${selectedProgress.toInt()}%",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Slider(
+                            value = selectedProgress,
+                            onValueChange = { selectedProgress = it },
+                            valueRange = 0f..100f,
+                            steps = 4,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    repository.updateSite(currentSite.copy(progress = selectedProgress.toInt()))
+                                    Toast.makeText(context, "Progress updated", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Update Progress")
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
             }
 
+            // Stats Cards
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ModernStatsCard(
+                        label = "Total Photos",
+                        value = photos.size.toString(),
+                        icon = Icons.Default.PhotoCamera,
+                        backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        modifier = Modifier.weight(1f)
+                    )
+                    ModernStatsCard(
+                        label = "Progress",
+                        value = "${selectedProgress.toInt()}%",
+                        icon = Icons.Default.Assessment,
+                        backgroundColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            // Filter Chips
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("All", "Today", "This Week", "Completed", "Ongoing").forEach { filter ->
+                        ModernFilterChip(
+                            label = filter,
+                            isSelected = selectedFilter == filter,
+                            onClick = { selectedFilter = filter }
+                        )
+                    }
+                }
+            }
+
+            // Photo Gallery
             if (photos.isEmpty()) {
                 item {
-                    Text("No photos yet for this site.", style = MaterialTheme.typography.bodyLarge)
+                    ModernEmptyState(
+                        icon = Icons.Default.PhotoCamera,
+                        title = "No Site Photos Yet",
+                        subtitle = "Capture construction progress to track your work visually",
+                        actionLabel = "Take First Photo",
+                        onAction = { permissionLauncher.launch(Manifest.permission.CAMERA) }
+                    )
                 }
             } else {
                 items(photos) { photo ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column {
                             AsyncImage(
                                 model = photo.uri,
                                 contentDescription = photo.description,
@@ -192,25 +345,38 @@ fun PhotoScreen(
                                     .fillMaxWidth()
                                     .height(200.dp)
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(photo.description)
-                                    Text("Date: ${java.util.Date(photo.date)}")
-                                }
-                                TextButton(
-                                    onClick = {
-                                        scope.launch { repository.deletePhoto(photo.id) }
-                                    },
-                                    colors = ButtonDefaults.textButtonColors(
-                                        contentColor = MaterialTheme.colorScheme.error
+                                    Text(
+                                        photo.description,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
+                                    Text(
+                                        "Captured on ${java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault()).format(java.util.Date())}",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            repository.deletePhoto(photo.id)
+                                        }
+                                    }
                                 ) {
-                                    Text("Delete")
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
                                 }
                             }
                         }

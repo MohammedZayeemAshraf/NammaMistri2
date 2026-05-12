@@ -27,6 +27,10 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,6 +45,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -131,12 +136,16 @@ class MainActivity : ComponentActivity() {
                         ModalNavigationDrawer(
                             drawerState = drawerState,
                             drawerContent = {
-                                ModalDrawerSheet {
-                                    Text(
-                                        text = "NAMMA MISTRI",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        modifier = Modifier.padding(16.dp)
+                                ModalDrawerSheet(
+                                    modifier = Modifier.fillMaxWidth(0.85f)
+                                ) {
+                                    ModernDrawerHeader(
+                                        userName = "Mistri",
+                                        location = "Bangalore, India"
                                     )
+                                    
+                                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                                    
                                     val drawerItems = listOf(
                                         DrawerItem("Home", Icons.Default.List, "Home"),
                                         DrawerItem("Add Site", Icons.Default.Add, "Add Site"),
@@ -145,16 +154,47 @@ class MainActivity : ComponentActivity() {
                                         DrawerItem("Site Photos", Icons.Default.PhotoCamera, "Photos"),
                                         DrawerItem("Standard Rates", Icons.Default.Assessment, "Rates")
                                     )
-                                    drawerItems.forEach { item ->
-                                        NavigationDrawerItem(
-                                            label = { Text(item.title) },
-                                            selected = currentScreen == item.route,
-                                            onClick = {
-                                                currentScreen = item.route
-                                                scope.launch { drawerState.close() }
-                                            },
-                                            icon = { Icon(item.icon, contentDescription = item.title) },
-                                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                    
+                                    Column(
+                                        modifier = Modifier
+                                            .padding(horizontal = 12.dp)
+                                            .padding(top = 8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        drawerItems.forEach { item ->
+                                            ModernDrawerItem(
+                                                label = item.title,
+                                                icon = item.icon,
+                                                isSelected = currentScreen == item.route,
+                                                onClick = {
+                                                    currentScreen = item.route
+                                                    scope.launch { drawerState.close() }
+                                                }
+                                            )
+                                        }
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    
+                                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                                    
+                                    Column(
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .fillMaxWidth(),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "v1.0.0",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            "Build Better Together",
+                                            fontSize = 10.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
                                         )
                                     }
                                 }
@@ -259,7 +299,15 @@ fun MainScreen(
     onToggleTheme: () -> Unit = {}
 ) {
     val sites by repository.getAllSites().collectAsState(initial = emptyList())
-    val isHome = currentScreen == "Home"
+    var selectedBottomNavItem by remember { mutableIntStateOf(0) }
+    
+    val bottomNavItems = listOf(
+        BottomNavItem("Dashboard", Icons.Default.Home, "Home"),
+        BottomNavItem("Sites", Icons.Default.LocationOn, "Photos"),
+        BottomNavItem("Calculate", Icons.Default.Calculate, "Calculator"),
+        BottomNavItem("Labor", Icons.Default.Person, "Labor"),
+        BottomNavItem("Rates", Icons.Default.Assessment, "Rates")
+    )
 
     Scaffold(
         topBar = {
@@ -272,14 +320,61 @@ fun MainScreen(
                         )
                     }
                 },
-                title = { Text(if (isHome) "Dashboard" else currentScreen) },
+                title = { 
+                    if (currentScreen == "Home") {
+                        Column {
+                            Text("Dashboard", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text("Bangalore, India", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        Text(currentScreen)
+                    }
+                },
                 actions = {
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications"
+                        )
+                    }
                     IconButton(onClick = onToggleTheme) {
                         Icon(
                             imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
                             contentDescription = if (isDarkTheme) "Switch to Light Mode" else "Switch to Dark Mode"
                         )
                     }
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profile",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            )
+        },
+        bottomBar = {
+            ModernBottomNavigationBar(
+                items = bottomNavItems,
+                selectedItem = selectedBottomNavItem,
+                onItemSelected = { index ->
+                    selectedBottomNavItem = index
+                    val newScreen = when (index) {
+                        0 -> "Home"
+                        1 -> "Photos"
+                        2 -> "Calculator"
+                        3 -> "Labor"
+                        4 -> "Rates"
+                        else -> "Home"
+                    }
+                    onScreenSelected(newScreen)
                 }
             )
         }
@@ -288,10 +383,21 @@ fun MainScreen(
             when (currentScreen) {
                 "Home" -> HomeScreen(
                     sites = sites,
-                    onQuickAccessSelected = { onScreenSelected(it) },
+                    onQuickAccessSelected = { screen ->
+                        onScreenSelected(screen)
+                        // Update bottom nav selection
+                        selectedBottomNavItem = when (screen) {
+                            "Photos" -> 1
+                            "Calculator" -> 2
+                            "Labor" -> 3
+                            "Rates" -> 4
+                            else -> 0
+                        }
+                    },
                     onSiteSelected = { siteId ->
                         onSelectSite(siteId)
                         onScreenSelected("Photos")
+                        selectedBottomNavItem = 1
                     }
                 )
                 "Add Site" -> AddSiteScreen(
@@ -299,7 +405,10 @@ fun MainScreen(
                     onSaved = { onScreenSelected("Home") }
                 )
                 "Calculator" -> CalculatorScreen(viewModel(factory = CalculatorViewModelFactory(repository)))
-                "Labor" -> LaborScreen(viewModel = viewModel(factory = LaborViewModelFactory(repository)), onBack = onBack)
+                "Labor" -> LaborScreen(viewModel = viewModel(factory = LaborViewModelFactory(repository)), onBack = {
+                    onScreenSelected("Home")
+                    selectedBottomNavItem = 0
+                })
                 "Photos" -> PhotoScreen(
                     repository = repository,
                     selectedSiteId = selectedSiteId,
@@ -308,10 +417,20 @@ fun MainScreen(
                 "Rates" -> RatesScreen(viewModel(factory = RatesViewModelFactory(repository)))
                 else -> HomeScreen(
                     sites = sites,
-                    onQuickAccessSelected = { onScreenSelected(it) },
+                    onQuickAccessSelected = { screen ->
+                        onScreenSelected(screen)
+                        selectedBottomNavItem = when (screen) {
+                            "Photos" -> 1
+                            "Calculator" -> 2
+                            "Labor" -> 3
+                            "Rates" -> 4
+                            else -> 0
+                        }
+                    },
                     onSiteSelected = { siteId ->
                         onSelectSite(siteId)
                         onScreenSelected("Photos")
+                        selectedBottomNavItem = 1
                     }
                 )
             }
@@ -335,29 +454,66 @@ fun HomeScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .background(MaterialTheme.colorScheme.background),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp)
+        contentPadding = PaddingValues(vertical = 16.dp, horizontal = 16.dp)
     ) {
         item {
-            Image(
-                painter = painterResource(id = R.drawable.banner),
-                contentDescription = "Banner",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(20.dp)),
-                contentScale = ContentScale.Crop
-            )
-        }
-        item {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "Quick Access",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold
+                    "Namaskara, Mistri!",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "ನಿರ್ಮಾಣ ಕಾರ್ಯ ಕೆಲಸವನ್ನು ಸುಗಮವಾಗಿ ನಡೆಸಿ",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Bangalore, Karnataka",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        {
+        ModernHeaderBanner(
+            title = "Let's Build!",
+            subtitle = "Track your construction progress and manage your workforce effectively",
+            backgroundColor = MaterialTheme.colorScheme.primary
+        )
+    }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Quick Access",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     homeActions.chunked(2).forEach { rowActions ->
                         Row(
@@ -365,8 +521,9 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             rowActions.forEach { action ->
-                                QuickAccessCard(
-                                    action = action,
+                                ModernQuickAccessCard(
+                                    title = action.title,
+                                    icon = action.icon,
                                     modifier = Modifier.weight(1f),
                                     onClick = { onQuickAccessSelected(action.destination) }
                                 )
@@ -379,30 +536,39 @@ fun HomeScreen(
                 }
             }
         }
+
         item {
-            Text(
-                text = "Active Sites",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Active Sites",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    "View All",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable { }
+                )
+            }
         }
+
         if (sites.isEmpty()) {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text("No active sites yet", style = MaterialTheme.typography.bodyLarge)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Create a site or add project details to track active work.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                ModernEmptyState(
+                    icon = Icons.Default.LocationOn,
+                    title = "No Active Sites",
+                    subtitle = "Create your first site to start tracking construction progress",
+                    actionLabel = "+ Add Site",
+                    onAction = { onQuickAccessSelected("Add Site") }
+                )
             }
         } else {
             items(sites) { site ->
