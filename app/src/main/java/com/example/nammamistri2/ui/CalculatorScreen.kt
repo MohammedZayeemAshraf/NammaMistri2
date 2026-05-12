@@ -249,7 +249,7 @@ fun WallIllustration() {
 @Composable
 fun RoomIllustration() {
     androidx.compose.foundation.Image(
-        painter = androidx.compose.ui.res.painterResource(id = com.example.nammamistri2.R.drawable.room_diagram),
+        painter = androidx.compose.ui.res.painterResource(id = com.example.nammamistri2.R.drawable.room),
         contentDescription = "Room diagram",
         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
         modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp))
@@ -339,7 +339,7 @@ fun RoomIllustrationOld() {
 @Composable
 fun SlabIllustration() {
     androidx.compose.foundation.Image(
-        painter = androidx.compose.ui.res.painterResource(id = com.example.nammamistri2.R.drawable.slab_diagram),
+        painter = androidx.compose.ui.res.painterResource(id = com.example.nammamistri2.R.drawable.slab),
         contentDescription = "Slab diagram",
         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
         modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp))
@@ -434,7 +434,7 @@ fun SlabIllustrationOld() {
 @Composable
 fun ColumnIllustration() {
     androidx.compose.foundation.Image(
-        painter = androidx.compose.ui.res.painterResource(id = com.example.nammamistri2.R.drawable.column_diagram),
+        painter = androidx.compose.ui.res.painterResource(id = com.example.nammamistri2.R.drawable.column),
         contentDescription = "Column diagram",
         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
         modifier = Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(16.dp))
