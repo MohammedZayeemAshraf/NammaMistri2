@@ -45,19 +45,6 @@ fun RatesScreen(viewModel: RatesViewModel = viewModel()) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            item {
-                Text(
-                    "Material Rates",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "${rates.size} material${if (rates.size != 1) "s" else ""} listed",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
 
             items(rates) { rate ->
                 Card(
