@@ -1,0 +1,57 @@
+block-beta
+    columns 3
+
+    block:PRESENTATION["Presentation Layer"]:3
+        MA["MainActivity"]
+        THEME["Material3 Theme\n(Light / Dark)"]
+        COMP["ModernComponents\n(Reusable UI)"]
+    end
+
+    block:SCREENS["Screens — Jetpack Compose"]:3
+        SCR1["HomeScreen"]
+        SCR2["LaborScreen"]
+        SCR3["PhotoScreen"]
+        SCR4["CalculatorScreen"]
+        SCR5["RatesScreen"]
+        SCR6["ProfileScreen"]
+    end
+
+    block:VIEWMODELS["ViewModels — Jetpack ViewModel + Coroutines"]:3
+        VM1["LaborViewModel\nStateFlow / combine"]
+        VM2["CalculatorViewModel\nBrick · Slab · Column"]
+        VM3["RatesViewModel\nCRUD Rates"]
+    end
+
+    block:REPOSITORY["Repository — Single Source of Truth"]:3
+        REPO["NammaMistriRepository"]
+        SP["SharedPreferences\n(Profile)"]
+        FP["FileProvider\n(Camera / Gallery)"]
+    end
+
+    block:DATABASE["Room Database — AppDatabase v8"]:3
+        DAO1["SiteDao"]
+        DAO2["WorkerDao"]
+        DAO3["LaborEntryDao"]
+        DAO4["MaterialRateDao"]
+        DAO5["PhotoDao"]
+        DB[("SQLite\nnamma_mistri_v2_db")]
+    end
+
+    MA --> THEME
+    MA --> COMP
+    SCREENS --> VIEWMODELS
+    VIEWMODELS --> REPO
+    REPO --> DAO1 & DAO2 & DAO3 & DAO4 & DAO5
+    DAO1 & DAO2 & DAO3 & DAO4 & DAO5 --> DB
+
+    classDef presentation fill:#FFF3E8,stroke:#FF6B00,color:#1A1A1A
+    classDef screens fill:#E8F5E9,stroke:#2E7D32,color:#1A1A1A
+    classDef viewmodels fill:#E3F2FD,stroke:#1565C0,color:#1A1A1A
+    classDef repository fill:#FFF8E1,stroke:#F57F17,color:#1A1A1A
+    classDef database fill:#F3E5F5,stroke:#7B1FA2,color:#1A1A1A
+
+    class MA,THEME,COMP presentation
+    class SCR1,SCR2,SCR3,SCR4,SCR5,SCR6 screens
+    class VM1,VM2,VM3 viewmodels
+    class REPO,SP,FP repository
+    class DAO1,DAO2,DAO3,DAO4,DAO5,DB database

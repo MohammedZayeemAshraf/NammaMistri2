@@ -1,0 +1,44 @@
+erDiagram
+    SITES {
+        Long id PK
+        String name
+        String location
+        Int progress
+        Long createdDate
+    }
+
+    WORKERS {
+        Long id PK
+        String name
+        String role
+        Double dailyWage
+        Long siteId FK
+    }
+
+    LABOR_ENTRIES {
+        Long id PK
+        Long workerId FK
+        Long date
+        Double attendance
+        Double advance
+        String paymentMode
+    }
+
+    MATERIAL_RATES {
+        Long id PK
+        String materialName
+        String unit
+        Double rate
+    }
+
+    PHOTOS {
+        Long id PK
+        Long siteId FK
+        String uri
+        String description
+        Long date
+    }
+
+    SITES ||--o{ WORKERS : "has"
+    WORKERS ||--o{ LABOR_ENTRIES : "records"
+    SITES ||--o{ PHOTOS : "captures"
