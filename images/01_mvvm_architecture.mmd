@@ -1,0 +1,61 @@
+flowchart TD
+    subgraph UI["🖥️ UI Layer — Jetpack Compose"]
+        direction TB
+        MA["MainActivity\n(Entry Point / Splash)"]
+        MS["MainScreen\n(Scaffold + Nav)"]
+        HS["HomeScreen"]
+        LS["LaborScreen"]
+        PS["PhotoScreen"]
+        CS["CalculatorScreen"]
+        RS["RatesScreen"]
+        AS["AddSiteScreen"]
+        PF["ProfileScreen"]
+    end
+
+    subgraph VM["🧠 ViewModel Layer"]
+        LVM["LaborViewModel\n(attendance, payments,\nteam summary)"]
+        CVM["CalculatorViewModel\n(brick / slab / column calc)"]
+        RVM["RatesViewModel\n(CRUD material rates)"]
+        PVM["PhotoViewModel\n(site photos)"]
+    end
+
+    subgraph REPO["🗄️ Repository Layer"]
+        NMR["NammaMistriRepository\n(single source of truth)"]
+    end
+
+    subgraph DATA["💾 Data Layer — Room Database"]
+        direction LR
+        SD["SiteDao"]
+        WD["WorkerDao"]
+        LD["LaborEntryDao"]
+        MD["MaterialRateDao"]
+        PD["PhotoDao"]
+        DB[("AppDatabase\nnamma_mistri_v2_db")]
+    end
+
+    subgraph STORAGE["📦 Local Storage"]
+        SP["SharedPreferences\n(Profile Data)"]
+        FS["File Storage\n(Photos / Camera)"]
+    end
+
+    MA --> MS
+    MS --> HS & LS & PS & CS & RS & AS & PF
+
+    LS --> LVM
+    CS --> CVM
+    RS --> RVM
+    PS --> PVM
+
+    LVM & CVM & RVM & PVM --> NMR
+
+    NMR --> SD & WD & LD & MD & PD
+    SD & WD & LD & MD & PD --> DB
+
+    PF --> SP
+    PS --> FS
+
+    style UI fill:#FFF3E8,stroke:#FF6B00,color:#1A1A1A
+    style VM fill:#E3F2FD,stroke:#1565C0,color:#1A1A1A
+    style REPO fill:#E8F5E9,stroke:#2E7D32,color:#1A1A1A
+    style DATA fill:#FFF8E1,stroke:#F57F17,color:#1A1A1A
+    style STORAGE fill:#F3E5F5,stroke:#7B1FA2,color:#1A1A1A

@@ -1,0 +1,39 @@
+sequenceDiagram
+    actor User
+    participant UI as Compose UI
+    participant VM as ViewModel
+    participant Repo as Repository
+    participant DAO as Room DAO
+    participant DB as SQLite DB
+
+    Note over User,DB: Mark Worker Attendance
+    User->>UI: Tap attendance chip (Present/Half/Absent)
+    UI->>VM: markAttendance(workerId, value)
+    VM->>Repo: insertLaborEntry(LaborEntry)
+    Repo->>DAO: laborEntryDao.insert(entry)
+    DAO->>DB: INSERT INTO labor_entries
+    DB-->>DAO: rowId
+    DAO-->>Repo: success
+    Repo-->>VM: coroutine complete
+    VM->>VM: StateFlow emits updated workerStates
+    VM-->>UI: recompose WorkerCard
+
+    Note over User,DB: Add New Site
+    User->>UI: Fill name + tap "Use My Location"
+    UI->>UI: GPS / Geocoder resolves address
+    User->>UI: Tap "Save Site"
+    UI->>Repo: insertSite(Site)
+    Repo->>DAO: siteDao.insert(site)
+    DAO->>DB: INSERT INTO sites
+    DB-->>DAO: siteId
+    DAO-->>Repo: success
+    Repo-->>UI: navigate to Photos tab
+
+    Note over User,DB: Load Material Rates (startup seed)
+    UI->>Repo: getAllMaterialRates().first()
+    Repo->>DAO: materialRateDao.getAllRates()
+    DAO->>DB: SELECT * FROM material_rates
+    DB-->>DAO: List empty?
+    DAO-->>Repo: emptyList
+    Repo->>DAO: insert default rates (Brick/Cement/Sand)
+    DAO->>DB: INSERT INTO material_rates

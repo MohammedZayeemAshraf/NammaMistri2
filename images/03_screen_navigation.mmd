@@ -1,0 +1,39 @@
+flowchart TD
+    SPLASH["🏗️ Splash Screen\nopenpage.png\n5-second minimum"]
+    HOME["🏠 Dashboard\nBanner · Quick Access · Active Sites"]
+    LABOR["👷 Labor Diary\nAttendance · Payments · Summary"]
+    SITES["📸 Sites\nSelect Site · Photos · Progress"]
+    CALC["🧮 Calculator\nBrick · Slab · Column"]
+    RATES["📋 Standard Rates\nMaterial Price List"]
+    ADDSITE["➕ Add New Site\nName · GPS Location"]
+    PROFILE["👤 My Profile\nSelfie · Name · Phone · Trade"]
+    DRAWER["☰ Navigation Drawer"]
+
+    SPLASH -->|"DB ready"| HOME
+
+    HOME -->|"Bottom Nav"| LABOR
+    HOME -->|"Bottom Nav"| SITES
+    HOME -->|"Bottom Nav"| CALC
+    HOME -->|"Bottom Nav"| RATES
+    HOME -->|"Quick Access card"| LABOR
+    HOME -->|"Quick Access card"| SITES
+    HOME -->|"Quick Access card"| CALC
+    HOME -->|"Quick Access card"| RATES
+    HOME -->|"Active Site card"| SITES
+
+    DRAWER -->|"Menu item"| HOME
+    DRAWER -->|"Menu item"| ADDSITE
+    DRAWER -->|"Menu item"| CALC
+    DRAWER -->|"Menu item"| LABOR
+    DRAWER -->|"Menu item"| SITES
+    DRAWER -->|"Menu item"| RATES
+    DRAWER -->|"Menu item"| PROFILE
+
+    SITES -->|"No sites / button"| ADDSITE
+    ADDSITE -->|"Save → navigate"| SITES
+
+    style SPLASH fill:#FF6B00,color:#fff,stroke:#FF6B00
+    style HOME fill:#FFF3E8,stroke:#FF6B00,color:#1A1A1A
+    style DRAWER fill:#E3F2FD,stroke:#1565C0,color:#1A1A1A
+    style ADDSITE fill:#E8F5E9,stroke:#2E7D32,color:#1A1A1A
+    style PROFILE fill:#F3E5F5,stroke:#7B1FA2,color:#1A1A1A
