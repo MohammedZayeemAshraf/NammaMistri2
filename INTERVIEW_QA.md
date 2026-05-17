@@ -655,4 +655,593 @@ Key learnings:
 
 ---
 
+## SECTION P: Academic / College Viva Questions
+
+**Q81. What is Object-Oriented Programming? How have you applied OOP in this project?**
+
+OOP is a programming paradigm based on four principles:
+- **Encapsulation**: Data and behaviour are bundled together. In this project, `Worker` is a data class that encapsulates all worker properties. `NammaMistriRepository` hides database access details from ViewModels.
+- **Abstraction**: The ViewModel exposes only a `StateFlow<List<WorkerState>>` to the UI — the UI does not know how data is fetched. The internal Room queries are completely hidden.
+- **Inheritance**: Compose uses Kotlin's class hierarchy. Our `ViewModel` classes extend `androidx.lifecycle.ViewModel`.
+- **Polymorphism**: Different DAO functions have the same purpose (insert, delete) but operate on different entity types (`WorkerDao`, `SiteDao`, `PhotoDao`).
+
+---
+
+**Q82. What is the Software Development Life Cycle (SDLC)? Which model did you follow?**
+
+SDLC is the structured process for planning, creating, testing, and deploying software. The phases are: Requirements → Design → Implementation → Testing → Deployment → Maintenance.
+
+For this project we followed an **Iterative/Agile model**:
+- Each feature (Labor, Sites, Photos, Calculator) was a mini-cycle of design → code → test
+- Working software was available at every stage
+- Requirements evolved during development (e.g., adding dark mode and language switching after the core was built)
+
+A Waterfall model was not suitable because requirements were not fully known upfront.
+
+---
+
+**Q83. What are the SOLID principles? Give an example from your project.**
+
+SOLID is a set of five object-oriented design principles:
+- **S — Single Responsibility**: `LaborViewModel` only handles labor UI logic. `NammaMistriRepository` only handles data access. Neither does both.
+- **O — Open/Closed**: New screens can be added without modifying existing ones — the `when(currentScreen)` block is extended, not changed.
+- **L — Liskov Substitution**: Any DAO can be swapped with a test double (fake implementation) without breaking the Repository.
+- **I — Interface Segregation**: Each DAO (`WorkerDao`, `SiteDao`) has only the methods relevant to its entity — not one giant data access object.
+- **D — Dependency Inversion**: ViewModels depend on the Repository abstraction, not on concrete Room DAOs directly.
+
+---
+
+**Q84. What design patterns are used in this project?**
+
+| Pattern | Where Used |
+|---|---|
+| **Singleton** | `AppDatabase` — only one database instance created using double-checked locking |
+| **Repository** | `NammaMistriRepository` — single data access layer between ViewModels and DAOs |
+| **Observer** | `StateFlow` + `collectAsState()` — UI observes ViewModel state and reacts to changes |
+| **Factory** | `ViewModelProvider.Factory` — creates ViewModel instances with the Repository injected |
+| **Facade** | `NammaMistriRepository` — provides a simple interface hiding the complexity of multiple DAOs |
+
+---
+
+**Q85. What is a Database? What type of database does this app use?**
+
+A database is an organised collection of structured data stored and accessed electronically. NammaMistri2 uses **SQLite** — a relational database management system (RDBMS) embedded directly into the Android OS. It stores data in tables with rows and columns, supports SQL queries, and requires no server process. Room is the ORM layer that wraps SQLite with Kotlin-friendly APIs.
+
+---
+
+**Q86. What is normalisation in databases? Is your database normalised?**
+
+Normalisation is the process of organising a database to reduce data redundancy and improve integrity. The normal forms are:
+- **1NF**: Each column holds atomic values. ✅ — all fields are atomic (no comma-separated lists in a cell)
+- **2NF**: No partial dependency on a composite key. ✅ — all tables use a single-column primary key
+- **3NF**: No transitive dependencies. ✅ — worker name is stored in `workers` table only, not repeated in `labor_entries`
+
+The database is in **Third Normal Form (3NF)**. Worker details are not duplicated in attendance records — instead, a `workerId` foreign key references the `workers` table.
+
+---
+
+**Q87. What is a Primary Key and a Foreign Key?**
+
+- **Primary Key**: A column (or set of columns) that uniquely identifies each row in a table. In our `workers` table, `workerId` is an auto-incremented integer primary key — no two workers share the same ID.
+- **Foreign Key**: A column in one table that references the primary key of another table, establishing a relationship. In `labor_entries`, `workerId` is a foreign key pointing to `workers.workerId`. This ensures you cannot create a labor entry for a worker that doesn't exist.
+
+---
+
+**Q88. What are the different types of relationships in a relational database?**
+
+| Type | Example in NammaMistri2 |
+|---|---|
+| **One-to-One** | One profile per user |
+| **One-to-Many** | One Site has many Workers; One Worker has many LaborEntries |
+| **Many-to-Many** | Not used (would require a junction table) |
+
+The dominant relationship in this database is **One-to-Many** — a single construction site has multiple workers, and each worker has multiple attendance/payment records.
+
+---
+
+**Q89. What is the difference between `compileSdk`, `minSdk`, and `targetSdk`?**
+
+| Property | Value | Meaning |
+|---|---|---|
+| `compileSdk = 35` | API 35 | The SDK version used to compile the app. Allows use of the latest APIs in code. |
+| `minSdk = 26` | Android 8.0 | The minimum Android version the app will run on. Devices below this cannot install the app. |
+| `targetSdk = 35` | API 35 | Declares the highest Android version the app is designed and tested for. Enables Android's latest behaviour changes. |
+
+---
+
+**Q90. What is an APK? How is it different from an AAB?**
+
+- **APK (Android Package Kit)**: The traditional format for distributing Android apps. Contains all resources, compiled code (DEX), and assets for all device configurations.
+- **AAB (Android App Bundle)**: The modern format required by Google Play. A publishing format — Play Store dynamically delivers only the resources needed for the specific device (screen density, CPU architecture, language). Results in smaller download sizes by up to 40%.
+
+For direct installation (USB, email), APK is used. For Play Store submission, AAB is required.
+
+---
+
+**Q91. What is `AndroidManifest.xml` and what does it declare?**
+
+`AndroidManifest.xml` is the configuration file that every Android app must have. It declares:
+- **Package name**: `com.example.nammamistri2`
+- **Components**: All Activities, Services, BroadcastReceivers, ContentProviders
+- **Permissions**: `CAMERA`, `ACCESS_FINE_LOCATION`, `READ_EXTERNAL_STORAGE`
+- **Hardware features**: `android.hardware.camera`
+- **FileProvider**: The `<provider>` declaration enabling secure file sharing
+- **App metadata**: Icon, label, theme, backup rules
+
+---
+
+**Q92. What are the four main components of an Android application?**
+
+| Component | Description | Used in NammaMistri2? |
+|---|---|---|
+| **Activity** | A screen with a UI | ✅ Yes — `MainActivity` |
+| **Service** | Background processing without UI | ❌ Not used |
+| **BroadcastReceiver** | Responds to system-wide events | ❌ Not used |
+| **ContentProvider** | Shares data between apps | ✅ Yes — `FileProvider` for camera |
+
+NammaMistri2 primarily uses Activities and a ContentProvider (FileProvider).
+
+---
+
+**Q93. What is the difference between SQL and NoSQL databases?**
+
+| Feature | SQL (Used here — SQLite) | NoSQL (e.g., Firebase Firestore) |
+|---|---|---|
+| Structure | Fixed schema (tables, rows, columns) | Flexible schema (documents, collections) |
+| Query Language | SQL (Structured Query Language) | API-based (no SQL) |
+| Relationships | Foreign keys, JOINs | Embedding or references |
+| Transactions | ACID compliant | Eventual consistency (usually) |
+| Best for | Structured, relational data | Flexible, hierarchical, cloud data |
+
+SQLite/Room is chosen here because data is structured (workers, sites, entries), the app is offline, and relational queries (JOIN worker with labor entries) are needed.
+
+---
+
+**Q94. What is version control? How did you use Git in this project?**
+
+Version control is a system that records changes to files over time, allowing you to recall specific versions later. Git is the most widely used distributed version control system.
+
+In this project:
+- `git init` initialised the local repository
+- `git add .` staged changed files
+- `git commit -m "message"` created a snapshot of the current state
+- `git push -u origin viva` pushed to the remote GitHub repository
+- Branches were used to keep the `viva` version separate from the main branch
+
+---
+
+**Q95. What is the difference between functional and non-functional requirements?**
+
+| Type | Definition | Examples from NammaMistri2 |
+|---|---|---|
+| **Functional** | What the system *does* — specific features and behaviours | Mark attendance, calculate wages, capture site photos, add GPS location |
+| **Non-Functional** | How well the system *performs* — quality attributes | Works offline, loads in <2 seconds, supports Android 8+, app size <20MB, supports 3 languages |
+
+Non-functional requirements are often called Quality of Service (QoS) requirements. They define performance, reliability, usability, and security constraints.
+
+---
+
+**Q96. What is an API? Give an example used in your project.**
+
+An API (Application Programming Interface) is a set of rules and definitions that allows one software component to communicate with another. Examples from NammaMistri2:
+- **Room API**: `@Dao`, `@Query`, `@Insert` annotations that we use; Room generates the implementation
+- **Android Location API**: `LocationManager.getLastKnownLocation()` — we call it; Android provides GPS coordinates
+- **Geocoder API**: `Geocoder.getFromLocation()` — converts lat/lon to a human-readable address
+- **Coil API**: `AsyncImage(model = uri, ...)` — we call it; Coil handles downloading, caching, displaying
+
+---
+
+**Q97. What is the difference between a `class` and an `object` in Kotlin?**
+
+- `class`: A blueprint for creating instances. You call the constructor to create objects: `val worker = Worker(name = "Raju", ...)`. Multiple instances can exist.
+- `object`: A Kotlin singleton declaration. The instance is created automatically by the runtime and only one can exist: `object DatabaseModule { ... }`. Used for utilities and factory functions.
+- `data class`: A special class that auto-generates `equals`, `hashCode`, `toString`, `copy`. Used for all Room entities and UI state holders in this project.
+
+---
+
+**Q98. What is Abstraction? How does your app demonstrate it?**
+
+Abstraction means hiding complex implementation details and exposing only what is necessary. Three levels of abstraction in NammaMistri2:
+
+1. **Database abstraction**: The UI never writes SQL. It calls `viewModel.markAttendance(worker, date, 1.0)` — the SQL `INSERT OR REPLACE INTO labor_entries...` is completely hidden inside Room-generated code.
+2. **ViewModel abstraction**: `LaborScreen` does not know if data comes from a database, file, or network. It only sees `StateFlow<List<WorkerState>>`.
+3. **Repository abstraction**: ViewModels do not know whether data is cached locally or fetched remotely. The Repository decides.
+
+---
+
+**Q99. What is Encapsulation? How is it applied in this project?**
+
+Encapsulation is the bundling of data (fields) and the methods that operate on them into a single unit, restricting direct access to some components. In NammaMistri2:
+
+- `AppDatabase` encapsulates the SQLite connection — external code cannot directly access the `INSTANCE` variable (it is `private`)
+- `NammaMistriRepository` encapsulates all DAO calls — ViewModels only call repository functions, never DAOs directly
+- `WorkerState` is an immutable data class — its values can only be updated by creating a new instance via `copy()`, preventing accidental mutation
+
+---
+
+**Q100. What is the significance of the project from a social and real-world impact perspective?**
+
+NammaMistri2 addresses a genuine social need in India's construction sector:
+
+1. **Financial justice for workers**: Many daily wage workers are underpaid because wages are calculated manually and records are disputed. An automated, transparent record reduces wage theft and errors.
+2. **Digital inclusion**: The app targets low-literacy users with a simple icon-driven UI, local language support (Kannada, Hindi), and no internet requirement.
+3. **Formalisation of the informal sector**: India's construction industry employs over 50 million workers, mostly in the informal sector with no payslips. This app creates a digital paper trail.
+4. **Small contractor empowerment**: Small contractors cannot afford ERP software (₹50,000+/year). This free app provides the same core functionality.
+5. **Sustainable technology**: Works on low-end Android devices (2 GB RAM), does not require data plans, and has a minimal battery footprint.
+
+---
+
+## SECTION Q: Android Internals & Memory
+
+**Q101. What is ANR (Application Not Responding)? How does your app avoid it?**
+
+ANR is a system dialog shown when the app's main (UI) thread is blocked for more than **5 seconds** (for user input events) or **10 seconds** (for broadcasts). It makes the app appear frozen.
+
+NammaMistri2 avoids ANR by:
+- All Room database operations are `suspend` functions — they run on `Dispatchers.IO`, never on the main thread
+- GPS location fetching uses `withContext(Dispatchers.IO) { }` to move off the main thread
+- Coil image loading is fully asynchronous
+- The splash screen delay uses `kotlinx.coroutines.delay()` — a non-blocking suspension, not `Thread.sleep()` which would block the main thread
+
+---
+
+**Q102. What is a memory leak in Android? How can it happen in Jetpack Compose?**
+
+A memory leak occurs when an object is no longer needed but cannot be garbage collected because something still holds a reference to it.
+
+Common causes in Compose:
+- **Holding an Activity/Context reference in a ViewModel** — the ViewModel outlives the Activity, so the Activity cannot be GC'd. Fix: use `ApplicationContext` in the ViewModel, not `ActivityContext`.
+- **Uncancelled coroutines** — a coroutine launched with `GlobalScope` continues even after the screen is gone. Fix: always use `viewModelScope` which is automatically cancelled when the ViewModel is cleared.
+- **Callbacks capturing composable state** — passing a lambda into a non-Compose callback that holds a reference to Composition memory. Fix: use `rememberUpdatedState`.
+
+---
+
+**Q103. What is the difference between Android Runtime (ART) and Dalvik?**
+
+| Feature | Dalvik (old, Android < 5) | ART (Android 5+) |
+|---|---|---|
+| Compilation | JIT — compiled at runtime | AOT — compiled at install time |
+| Startup speed | Slower app start | Faster app start |
+| Install time | Fast install | Slightly slower install |
+| Battery | Higher CPU at runtime | Lower CPU (pre-compiled) |
+
+NammaMistri2 targets ART (minSdk 26 = Android 8.0). Our Kotlin code compiles to `.dex` bytecode, which ART then translates to native ARM machine code at install time for faster execution.
+
+---
+
+**Q104. What is `Context` in Android? What is the difference between Application Context and Activity Context?**
+
+`Context` is a handle to the Android system — it provides access to resources, databases, shared preferences, and system services.
+
+| | Activity Context | Application Context |
+|---|---|---|
+| Lifetime | Tied to the Activity lifecycle | Lives as long as the app process |
+| Use for | Inflating views, showing dialogs | Database, SharedPreferences, files |
+| Risk if stored | Memory leak if held in a singleton | Safe to store long-term |
+
+In `AppDatabase.getDatabase(context)`, we call `context.applicationContext` before storing it — ensuring the singleton holds the Application Context, not a short-lived Activity Context.
+
+---
+
+**Q105. What is the difference between a process and a thread in Android?**
+
+- **Process**: An isolated OS-level execution environment. Each Android app runs in its own process with its own memory heap. Apps cannot access each other's memory directly.
+- **Thread**: A unit of execution within a process. All threads in an app share the same heap. Android creates one main thread (UI thread) per process.
+
+Kotlin coroutines are NOT threads — they are lightweight cooperative tasks multiplexed onto a small thread pool. A single thread can run thousands of coroutines, switching between them at suspension points. This is far more efficient than one thread per background task.
+
+---
+
+## SECTION R: Kotlin Language Deep Dive
+
+**Q106. What is the difference between `val` and `var` in Kotlin?**
+
+- `val` — **immutable reference**. Cannot be reassigned after initialisation. Equivalent to Java `final`. The object it points to may still be mutable (a `val list` cannot be reassigned, but you can still call `list.add()`).
+- `var` — **mutable reference**. Can be reassigned at any time.
+
+In NammaMistri2 we prefer `val` everywhere — ViewModels expose `val uiState: StateFlow<...>`, all entities are `val` data classes. `var` is used only where mutation is genuinely required (e.g., the database `INSTANCE` singleton field).
+
+---
+
+**Q107. What is null safety in Kotlin? How does it prevent NullPointerException?**
+
+In Kotlin, the type system distinguishes between nullable (`String?`) and non-nullable (`String`) types at compile time. You cannot assign `null` to a non-nullable variable — the compiler rejects it.
+
+Key operators:
+- **Safe call** `?.` : `worker?.name` — returns null if worker is null, doesn't crash
+- **Elvis operator** `?:` : `worker?.name ?: "Unknown"` — default if null
+- **Non-null assertion** `!!` : `worker!!.name` — throws NullPointerException if null (use rarely)
+- **Safe let** : `photoUri?.let { AsyncImage(model = it) }` — runs block only if not null
+
+---
+
+**Q108. What are extension functions in Kotlin? Give an example.**
+
+Extension functions add new methods to an existing class without modifying its source code or subclassing it.
+
+Syntax: `fun ClassName.newFunction(): ReturnType { ... }`
+
+Practical example for this project:
+```kotlin
+fun Double.toRupees(): String = "₹${String.format("%,.0f", this)}"
+
+// Usage in composable:
+Text(text = worker.balance.toRupees())   // Output: ₹12,500
+```
+This adds `toRupees()` to the `Double` type. Android Jetpack uses extension functions extensively — `context.getSystemService<LocationManager>()` is an extension on `Context`.
+
+---
+
+**Q109. What are scope functions in Kotlin (`let`, `apply`, `also`, `run`, `with`)?**
+
+Scope functions execute a code block in the context of an object, making code more concise:
+
+| Function | Object reference | Returns |
+|---|---|---|
+| `let` | `it` | Lambda result |
+| `apply` | `this` | The object itself |
+| `also` | `it` | The object itself |
+| `run` | `this` | Lambda result |
+| `with` | `this` | Lambda result |
+
+In NammaMistri2:
+- `apply` is used to configure an object during creation: `File(dir, name).apply { parentFile?.mkdirs() }`
+- `let` is used for null-safe execution: `photoUri?.let { uri -> AsyncImage(model = uri) }`
+
+---
+
+**Q110. What is a sealed class in Kotlin? When would you use it over an enum?**
+
+A `sealed class` is a restricted class hierarchy — all subclasses must be in the same file. Unlike `enum`, each subclass can carry **different data**.
+
+Use **enum** when all cases are identical: `enum class Status { LOADING, SUCCESS, ERROR }`
+
+Use **sealed class** when cases carry different data:
+```kotlin
+sealed class UiState {
+    object Loading : UiState()
+    data class Success(val workers: List<Worker>) : UiState()
+    data class Error(val message: String) : UiState()
+}
+```
+A `when` block on a sealed class is **exhaustive** — the compiler forces you to handle every case. Ideal for representing screen states (Loading / Success / Error).
+
+---
+
+**Q111. What is a higher-order function and a lambda in Kotlin?**
+
+- **Lambda**: An anonymous function with no name, passed as a value. `onClick = { viewModel.save() }` is a lambda.
+- **Higher-order function**: A function that accepts a function as a parameter or returns one.
+
+```kotlin
+// items() is a higher-order function; the trailing lambda renders each item
+LazyColumn {
+    items(workers) { worker ->
+        WorkerCard(worker)
+    }
+}
+```
+Jetpack Compose is built on higher-order functions — every `@Composable` function accepts `content: @Composable () -> Unit` slot lambdas for its children.
+
+---
+
+**Q112. What is the difference between `==` and `===` in Kotlin?**
+
+- `==` — **structural equality**: calls `equals()`. Two data class instances with the same field values return `true`. `worker1 == worker2` compares all properties.
+- `===` — **referential equality**: checks if both variables point to the exact same object in memory. Two separate instances of a data class with identical values will be `==` but NOT `===`.
+
+This matters for Compose recomposition — Compose uses `==` (structural equality) to detect parameter changes. Because entities are data classes with auto-generated `equals()`, Compose correctly detects when only one worker's wage changed and recomposes only that card.
+
+---
+
+## SECTION S: Coroutines & Reactive Programming
+
+**Q113. What is the difference between a hot flow and a cold flow?**
+
+- **Cold flow** (`flow { }` builder): Starts producing values only when a collector subscribes. Each collector gets its own independent execution of the producer block.
+- **Hot flow** (`StateFlow`, `SharedFlow`): Produces values regardless of collectors. All collectors share the same stream. `StateFlow` always holds the latest value — new collectors immediately receive current state.
+
+Room DAO functions return cold flows — the SQL query runs only when the ViewModel collects it. The ViewModel converts this to a `StateFlow` (hot), so the UI always has a current value the moment it subscribes.
+
+---
+
+**Q114. What is structured concurrency? Why is `GlobalScope` an anti-pattern?**
+
+Structured concurrency ensures all coroutines are launched within a defined scope, and the scope does not complete until all its children complete. If a child fails, the parent cancels all siblings.
+
+In NammaMistri2:
+- `viewModelScope` is the parent for all ViewModel coroutines
+- When the ViewModel is cleared, `viewModelScope.cancel()` is called automatically
+- All child coroutines (DB inserts, flow collections) are cancelled immediately
+
+`GlobalScope.launch { }` breaks structured concurrency — the coroutine lives as long as the process regardless of screen lifecycle, causing memory leaks and zombie background tasks.
+
+---
+
+**Q115. What is `combine()` in Kotlin Flows? Where is it used in this project?**
+
+`combine()` merges multiple flows, emitting a new combined value whenever **any** input flow emits. It always uses the latest value from each flow.
+
+In `LaborViewModel`, balance calculation uses combine:
+```kotlin
+combine(
+    repository.getTotalDaysWorked(workerId),   // Flow<Double>
+    repository.getTotalAdvance(workerId),       // Flow<Double>
+    repository.getWorkerById(workerId)          // Flow<Worker?>
+) { days, advance, worker ->
+    val earned = days * (worker?.dailyWage ?: 0.0)
+    WorkerState(worker = worker, balance = earned - advance)
+}
+```
+Whenever attendance is marked or a payment is added, one of these flows emits, `combine` fires, the balance recalculates, and the UI card updates — all automatically.
+
+---
+
+**Q116. What is the `suspend` keyword? Can a suspend function run on the main thread?**
+
+`suspend` marks a function that can be paused and resumed without blocking the thread. Yes — a `suspend` function runs on whatever thread calls it by default. `suspend` alone does NOT switch threads.
+
+Thread switching requires `withContext(Dispatcher)`:
+```kotlin
+suspend fun resolveAddress(lat: Double, lon: Double): String {
+    return withContext(Dispatchers.IO) {       // switch to background thread
+        geocoder.getFromLocation(lat, lon, 1)
+            ?.first()?.getAddressLine(0) ?: ""
+    }                                          // automatically returns to original thread
+}
+```
+Room's own suspend functions internally call `withContext(Dispatchers.IO)`, so you don't need to do it manually for DAO calls.
+
+---
+
+## SECTION T: Architecture & Engineering Judgement
+
+**Q117. What is Clean Architecture? How does MVVM relate to it?**
+
+Clean Architecture (Robert C. Martin) organises code into layers with a strict dependency rule — outer layers depend on inner layers, never the reverse:
+
+1. **Entities** (innermost) — `Worker`, `Site`, `LaborEntry` — pure Kotlin data
+2. **Use Cases** — business logic (balance calculation, rate seeding)
+3. **Interface Adapters** — ViewModels, DAOs (converts between layers)
+4. **Frameworks** (outermost) — Compose UI, Room, Android OS
+
+MVVM is a **presentation pattern** that maps to layers 3 and 4. NammaMistri2 follows Clean Architecture partially — the Repository acts as the Use Case/Interface Adapter boundary. A full implementation would add explicit Use Case classes between ViewModel and Repository.
+
+---
+
+**Q118. Why is accessing a DAO directly from a Composable a bad practice?**
+
+It violates Separation of Concerns. Problems:
+1. **No lifecycle safety**: Composables don't have a scope that survives recomposition cleanly
+2. **Untestable**: The Composable cannot be tested without a real Room database
+3. **No error handling layer**: Exceptions would crash the recomposition
+4. **Tight coupling**: The UI is directly coupled to the database implementation
+
+The correct path is always: **Composable → ViewModel → Repository → DAO**.
+
+---
+
+**Q119. What is Dependency Injection? How does this project implement it?**
+
+Dependency Injection (DI) is when an object receives its dependencies from outside rather than creating them internally. It enables loose coupling and testability.
+
+NammaMistri2 uses **manual DI**:
+```kotlin
+// In MainActivity
+val db = AppDatabase.getDatabase(applicationContext)
+val repo = NammaMistriRepository(db.workerDao(), db.siteDao(), ...)
+val laborViewModel: LaborViewModel by viewModels {
+    LaborViewModelFactory(repo)
+}
+```
+The ViewModel receives the Repository injected through a custom `ViewModelProvider.Factory`. For a larger project, **Hilt** would automate this — `@HiltViewModel` + `@Inject constructor(val repo: NammaMistriRepository)` replaces all the factory boilerplate.
+
+---
+
+**Q120. What happens if two coroutines write to the database simultaneously?**
+
+SQLite handles this via **serialised write transactions** — only one write can occur at a time using a file-level write lock. If two coroutines call `dao.insert()` simultaneously, one acquires the write lock, completes, releases it, and then the second proceeds. No corruption occurs.
+
+Room additionally enables **WAL (Write-Ahead Logging)** mode by default — WAL allows concurrent reads while a write is in progress. Readers get a consistent snapshot and are never blocked by writers, which significantly improves perceived performance when the UI is reading while the user is saving.
+
+---
+
+**Q121. How would you add proper error handling to the ViewModels?**
+
+A sealed `UiState` class carries loading and error states:
+```kotlin
+sealed class UiState {
+    object Loading : UiState()
+    data class Success(val workers: List<WorkerState>) : UiState()
+    data class Error(val message: String) : UiState()
+}
+
+viewModelScope.launch {
+    _uiState.value = UiState.Loading
+    try {
+        repository.insertWorker(worker)
+        // Success: flow update triggers automatically
+    } catch (e: Exception) {
+        _uiState.value = UiState.Error(e.message ?: "Unknown error")
+    }
+}
+```
+The Composable then shows a `Snackbar` or red banner when the state is `Error`.
+
+---
+
+**Q122. How does Room generate DAO implementations at compile time?**
+
+Room uses **KSP (Kotlin Symbol Processing)** — an annotation processor that runs during the Kotlin compilation step. When you write:
+```kotlin
+@Dao interface WorkerDao {
+    @Insert suspend fun insert(worker: Worker)
+}
+```
+KSP reads the `@Dao` and `@Insert` annotations and generates a concrete class `WorkerDao_Impl` containing the actual `PreparedStatement`-based SQLite code. You never write this boilerplate.
+
+Crucially, if you write a `@Query` with a wrong column name:
+```kotlin
+@Query("SELECT * FROM wrokers") // typo: "wrokers" not "workers"
+```
+KSP catches this at **compile time** — the build fails with a clear error before the app runs.
+
+---
+
+**Q123. What is the difference between `@Insert`, `@Update`, `@Delete`, and `@Query` in Room?**
+
+| Annotation | SQL Generated | Use Case |
+|---|---|---|
+| `@Insert` | `INSERT INTO table (...)` | Add a new row |
+| `@Update` | `UPDATE table SET ... WHERE id = ?` | Modify a row (matched by primary key) |
+| `@Delete` | `DELETE FROM table WHERE id = ?` | Remove a row (matched by primary key) |
+| `@Query` | Your own SQL string | Complex SELECTs, JOINs, aggregations |
+
+`@Insert(onConflict = OnConflictStrategy.REPLACE)` = INSERT or UPDATE — inserts if the primary key is new, replaces the existing row if it already exists. Used for attendance marking so re-submitting the same date updates rather than duplicates.
+
+---
+
+**Q124. If asked to explain your most complex piece of code line by line — what would you show?**
+
+The reactive balance calculation using `combine` in `LaborViewModel`:
+
+```kotlin
+combine(
+    repository.getWorkersBySite(siteId),       // [1] Emits list of workers for site
+    repository.getAllLaborEntries()             // [2] Emits all attendance/payment rows
+) { workers, entries ->                        // [3] Fires whenever either list changes
+    workers.map { worker ->                    // [4] Process each worker
+        val mine = entries                     // [5] Filter only this worker's entries
+            .filter { it.workerId == worker.workerId }
+        val days = mine.sumOf { it.attendance }// [6] Sum 1.0/0.5/0.0 values
+        val paid = mine                        // [7] Sum only payment rows
+            .filter { it.paymentMode != null }
+            .sumOf { it.advance }
+        WorkerState(                           // [8] Build UI-ready state object
+            worker = worker,
+            daysWorked = days,
+            totalEarned = days * worker.dailyWage,
+            balance = (days * worker.dailyWage) - paid
+        )
+    }
+}.stateIn(                                    // [9] Convert cold Flow → hot StateFlow
+    scope = viewModelScope,
+    started = SharingStarted.WhileSubscribed(5000), // [10] Stop if no UI for 5 sec
+    initialValue = emptyList()                // [11] UI has a value before first DB read
+)
+```
+
+---
+
+**Q125. What is the difference between `stateIn` and `shareIn`?**
+
+Both convert a cold `Flow` into a shared hot flow:
+
+- **`stateIn` → `StateFlow`**: Holds exactly one current value. New collectors immediately receive the latest value. Used for screen state that the UI must always display (worker list, balance).
+- **`shareIn` → `SharedFlow`**: Configurable replay buffer. Can replay 0 values. Used for one-time events — navigation commands, toast messages — that should NOT replay when the user rotates the screen.
+
+`SharingStarted.WhileSubscribed(5000)` starts upstream collection when the first collector appears and stops 5 seconds after the last collector disappears — handling screen rotation gracefully without cancelling and restarting the database query.
+
+---
+
 *Last updated: May 2026 | NammaMistri2 — Android Construction Site Management App*
